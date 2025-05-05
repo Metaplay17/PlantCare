@@ -7,6 +7,7 @@ from utils import *
 
 app.config['UPLOAD_FOLDER'] = IMAGE_FOLDER
 
+
 @app.route('/plants')
 def get_plants():
     plants = Plant.query.all()
@@ -38,9 +39,12 @@ def get_photos():
 
 @app.route('/plants', methods=['POST'])
 def add_plant():
-    data = request.json()
+    data = request.json
     if "name" not in data.keys() or "science_name" not in data.keys() or "place" not in data.keys():
         return jsonify({"error": "Some attributes doesnt exist"}), 400
+
+    if Plant.query.filter(Plant.name == data["name"]).all() or Plant.query.filter(Plant.place == data["place"]).all():
+        return jsonify({"status": "conflict"}), 409
 
     new_plant = Plant(name=data["name"], science_name=data["science_name"], place=data["place"])
     db.session.add(new_plant)
@@ -89,10 +93,10 @@ def add_note():
 def add_task():
     data = request.json()
     if "plant_id" not in data.keys() or "task_id" not in data.keys() or "task_type_id" not in data.keys() \
-            or "task_detail" not in data.keys():
-        return jsonify({"error": "Some attributes doesn't exist"}), 400
+            or "task_detail" not in data.keys() or "repeat_type" not in data.keys():
+        return jsonify({"error": "Some attribute doesn't exist"}), 400
 
-    new_task = Task(plant_id=data["plant_id"], task_type_id=data["task_type_id"])
+    new_task = Task(plant_id=data["plant_id"], task_type_id=data["task_type_id"], repeat_type=data["repeat_type"])
     new_task_detail = TaskDetail(task_id=new_task.task_id, detail=data["task_detail"])
     new_task.details = new_task_detail
     db.session.add(new_task)
@@ -100,3 +104,4 @@ def add_task():
     db.session.commit()
 
 
+app.run()

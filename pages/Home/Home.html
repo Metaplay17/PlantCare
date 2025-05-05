@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlantCare</title>
+  <link rel="stylesheet" href="Home-styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="app-title">PlantCare</h1>
+      <div class="user-section">
+        <span class="username">John Doe</span>
+        <button class="sign-out-btn">Sign Out</button>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="app-icon">
+        🌱
+      </div>
+      <nav class="menu">
+        <button class="menu-item">Plants</button>
+        <button class="menu-item">Photos</button>
+        <button class="menu-item">Notes</button>
+        <button class="menu-item">Tasks</button>
+        <button class="menu-item">Calendar</button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+      <div class="controls">
+        <button class="add-btn" id="add-btn">Add</button>
+        <p class="state-label">STATE</p>
+        <button class="filter-btn">Filter</button>
+      </div>
+      <div class="content-area">
+        <!-- Здесь будет динамический контент -->
+      </div>
+    </main>
+</div>
+
+
+<!-- Модальное окно -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Adding Plant</h2>
+      <button id="closeModalBtn" class="close-btn">&times;</button>
+    </div>
+    <form id="plantForm" class="modal-body">
+      <p class="info" id="adding-info"></p>
+      <div class="form-group">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="scienceName">Science Name:</label>
+        <input type="text" id="scienceName" name="scienceName" required>
+      </div>
+      <div class="form-group">
+        <label for="addedDate">Added Date:</label>
+        <input type="date" id="addedDate" name="addedDate" value="" required>
+      </div>
+      <div class="form-group">
+        <label for="place">Place:</label>
+        <input type="number" id="place" name="place" min="1" max="9999" required>
+      </div>
+      <button type="submit" class="submit-btn">Submit</button>
+    </form>
+  </div>
+</div>
+</body>
+<script src="code.js"></script>
+</html>
