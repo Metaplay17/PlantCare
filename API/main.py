@@ -20,8 +20,8 @@ def get_photos():
     photos = Photo.query.all()
     result = []
     for p in photos:
-        dir = os.path.join(current_app.root_path, 'static', 'photos')
-        with open(dir + p.filename, "rb") as image_file:
+        directory = os.path.join(current_app.root_path, 'static', 'userphotos')
+        with open(directory + p.filename, "rb") as image_file:
             # 2. Читаем бинарные данные
             image_data = image_file.read()
 

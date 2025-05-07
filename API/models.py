@@ -63,6 +63,12 @@ class Photo(db.Model):
         return f"<Photo(photo_id={self.photo_id}, filename={self.filename})>"
 
 
+class MainPhoto(db.Model):
+    __tablename__ = "main_photos"
+    plant_id = db.Column(db.Integer, db.ForeignKey('plants.plant_id'), primary_key=True)
+    photo_id = db.Column(db.Integer, db.ForeignKey('photos.photo_id'))
+
+
 class Task(db.Model):
     __tablename__ = "tasks"
     task_id = db.Column(db.Integer, primary_key=True)
