@@ -12,7 +12,7 @@ app.config['UPLOAD_FOLDER'] = IMAGE_FOLDER
 def get_plants():
     plants = Plant.query.all()
     return jsonify([{"plant_id": p.plant_id, "name": p.name, "science_name": p.science_name, "date_added": p.date_added,
-                     "place": p.place} for p in plants])
+                     "place": p.place, "main_photo": get_plant_main_photo(p.plant_id)} for p in plants])
 
 
 @app.route('/photos')

@@ -5,6 +5,9 @@
 // }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const contentBlock = document.getElementById("content-area");
+  await LoadPlants();
+
   // Получаем элементы модального окна
   const modalAdd = document.getElementById('modal');
   const openModalAddBtn = document.getElementById("add-btn");
@@ -59,6 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       plantForm.reset();
 
       document.getElementById("adding-info").innerHTML = "";
+      LoadPlants();
       return;
     }
     else if (status >= 500 && status < 600)
@@ -71,10 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("adding-info").innerHTML = "This name or place is already used";
         return;
       }
-
-
   });
-
 });
 
 async function AddPlant(data) {
@@ -97,4 +98,141 @@ function CheckSQLInput(input) {
       return false;
   }
   return true;
+}
+
+function formatDate(inputDateStr) {
+  const date = new Date(inputDateStr);
+
+  // Проверяем, что дата корректна
+  if (isNaN(date.getTime())) {
+      throw new Error("Некорректная дата");
+  }
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Месяцы начинаются с 0
+  const year = date.getFullYear();
+
+  return `${day}.${month}.${year}`;
+}
+
+async function LoadPlants() {
+  let response = await fetch("http://127.0.0.1:5000/plants");
+  if (response.status === 200) {
+    let plants = await response.json();
+    renderPlants(plants);
+  }
+}
+
+function renderPlants(data) {
+  const contentArea = document.getElementById('content-area');
+  contentArea.innerHTML = ''; // Очистка перед добавлением новых данных
+
+  if (!Array.isArray(data) || data.length === 0) {
+      contentArea.innerHTML = '<p>Нет доступных растений</p>';
+      return;
+  }
+
+  data.forEach(plant => {
+      // Создаем элемент карточки
+      const card = document.createElement('div');
+      card.className = 'plant-card';
+
+      // Фотография
+      const img = document.createElement('img');
+      img.className = 'plant-photo';
+      img.alt = plant.name;
+
+      // Если фото есть — устанавливаем base64, иначе ставим заглушку
+      if (plant.main_photo) {
+          img.src = `data:image/jpeg;base64,${plant.main_photo}`;
+      } else {
+          img.src = 'https://via.placeholder.com/300x200?text=No+Photo';
+      }
+
+      // Информация
+      const info = document.createElement('div');
+      info.className = 'plant-info';
+
+      const name = document.createElement('h3');
+      name.className = 'plant-name';
+      name.textContent = plant.name;
+
+      const sciName = document.createElement('p');
+      sciName.className = 'plant-scientific';
+      sciName.textContent = plant.science_name || 'Научное название не указано';
+
+      const meta = document.createElement('p');
+      meta.className = 'plant-meta';
+      meta.textContent = `Добавлено: ${formatDate(plant.date_added)} | Место: ${Math.round(plant.place)}`;
+
+      // Сборка карточки
+      info.appendChild(name);
+      info.appendChild(sciName);
+      info.appendChild(meta);
+
+      card.appendChild(img);
+      card.appendChild(info);
+
+      // Добавляем в контейнер
+      contentArea.appendChild(card);
+
+      card.addEventListener("click", () => {
+        displayPlantData(plant.name, plant.science_name, Math.round(plant.place), plant.main_photo);
+      });
+  });
+}
+
+function displayPlantData(name, scienceName, place, photoBase64) {
+  const contentArea = document.getElementById('content-area');
+
+  // Создаем карточку растения
+  const plantCard = document.createElement('div');
+  plantCard.classList.add('plant-card-static');
+
+  // Добавляем фото
+  const photoElement = document.createElement('img');
+  photoElement.src = `data:image/jpeg;base64,${photoBase64}`; // base64 строка
+  photoElement.alt = name;
+  plantCard.appendChild(photoElement);
+
+  // Добавляем название
+  const nameElement = document.createElement('h3');
+  nameElement.classList.add('plant-name');
+  nameElement.textContent = name;
+  plantCard.appendChild(nameElement);
+
+  // Добавляем научное название
+  const scienceNameElement = document.createElement('p');
+  scienceNameElement.textContent = `Scientific Name: ${scienceName}`;
+  plantCard.appendChild(scienceNameElement);
+
+  const placeElement = document.createElement('p');
+  placeElement.textContent = `Place: ${place}`;
+  plantCard.appendChild(placeElement);
+
+  // Добавляем блок для связанных задач
+  const tasksBlock = document.createElement('div');
+  tasksBlock.classList.add('related-block');
+  const tasksTitle = document.createElement('h4');
+  tasksTitle.textContent = 'Related Tasks';
+  tasksBlock.appendChild(tasksTitle);
+  const tasksPlaceholder = document.createElement('p');
+  tasksPlaceholder.textContent = 'No tasks added yet.';
+  tasksBlock.appendChild(tasksPlaceholder);
+
+  // Добавляем блок для связанных заметок
+  const notesBlock = document.createElement('div');
+  notesBlock.classList.add('related-block');
+  const notesTitle = document.createElement('h4');
+  notesTitle.textContent = 'Related Notes';
+  notesBlock.appendChild(notesTitle);
+  const notesPlaceholder = document.createElement('p');
+  notesPlaceholder.textContent = 'No notes added yet.';
+  notesBlock.appendChild(notesPlaceholder);
+
+  // Добавляем все элементы в content-area
+  contentArea.innerHTML = ''; // Очищаем предыдущее содержимое
+  contentArea.appendChild(plantCard);
+  contentArea.appendChild(tasksBlock);
+  contentArea.appendChild(notesBlock);
 }

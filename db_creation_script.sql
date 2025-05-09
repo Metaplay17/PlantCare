@@ -70,9 +70,9 @@ CREATE TABLE IF NOT EXISTS photos (
 );
 
 CREATE TABLE IF NOT EXISTS main_photos (
-    plant_id INT PRIMARY KEY
-    photo_id INT
-    FOREIGN KEY (plant_id) REFERENCES plants(plant_id)
+    plant_id INT PRIMARY KEY,
+    photo_id INT,
+    FOREIGN KEY (plant_id) REFERENCES plants(plant_id),
     FOREIGN KEY (photo_id) REFERENCES photos(photo_id)
 );
 
