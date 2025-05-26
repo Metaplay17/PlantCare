@@ -23,8 +23,8 @@ def get_plant_main_photo(plant_id):
             return image_base64
 
     directory = os.path.join(current_app.root_path, 'static', 'userphotos')
-    filename = Photo.query.filter(Photo.photo_id == photo.photo_id).first().filename  # Тут возможно массив
-    with open(directory + filename, "rb") as image_file:
+    filename = Photo.query.filter(Photo.photo_id == photo.photo_id).first().filename
+    with open(directory + "\\" + filename, "rb") as image_file:
         # 2. Читаем бинарные данные
         image_data = image_file.read()
 

@@ -1,93 +1,53 @@
-// async function GetPlants() {
-//     let response = await fetch("http://127.0.0.1:5000/plants");
-//     let plants = await response.json();
-//     return plants;
-// }
-
 document.addEventListener("DOMContentLoaded", async () => {
-  const contentBlock = document.getElementById("content-area");
-  await LoadPlants();
-
-  // Получаем элементы модального окна
-  const modalAdd = document.getElementById('modal');
-  const openModalAddBtn = document.getElementById("add-btn");
-  const closeModalAddBtn = document.getElementById('closeModalBtn');
-  const plantForm = document.getElementById('plantForm');
-
-  // Открываем модальное окно
-  openModalAddBtn.addEventListener('click', () => {
-    modalAdd.style.display = 'block';
-    // Устанавливаем текущую дату в поле "Added Date"
-    const addedDateInput = document.getElementById('addedDate');
-    const today = new Date().toISOString().split('T')[0];
-    addedDateInput.value = today;
-  });
-
-  // Закрываем модальное окно
-  closeModalAddBtn.addEventListener('click', () => {
-    modalAdd.style.display = 'none';
-  });
-
-  // Закрываем модальное окно при клике вне его области
-  window.addEventListener('click', (event) => {
-    if (event.target === modalAdd) {
-      document.getElementById("adding-info").innerHTML = "";
-      modalAdd.style.display = 'none';
-    }
-  });
-
-  // Обработка отправки формы
-  plantForm.addEventListener('submit', async (event) => {
-    event.preventDefault(); // Предотвращаем отправку формы
-    const formData = new FormData(plantForm);
-
-    data = {
-      name: formData.get('name'),
-      science_name: formData.get('scienceName'),
-      added_date: formData.get('addedDate'),
-      place: formData.get('place'),
-    };
-
-    if (!CheckSQLInput(data["name"]) || !CheckSQLInput(data["science_name"])) {
-      document.getElementById("adding-info").innerHTML = "Use another name";
-      return;
-    }
-    let status = await AddPlant(data);
-    if (status === 201) 
-    {
-      // Закрываем модальное окно после отправки
-      modal.style.display = 'none';
-
-      // Очищаем форму
-      plantForm.reset();
-
-      document.getElementById("adding-info").innerHTML = "";
-      LoadPlants();
-      return;
-    }
-    else if (status >= 500 && status < 600)
-    {
-      document.getElementById("adding-info").innerHTML = "Internal server error, check internet";
-      return;
-    }
-    else if (status === 409)
-      {
-        document.getElementById("adding-info").innerHTML = "This name or place is already used";
-        return;
-      }
-  });
+  window.dispatchEvent(new HashChangeEvent('hashchange'));
+  // Добавить вход
 });
 
-async function AddPlant(data) {
+window.addEventListener('hashchange', async () => {
+  let action = window.location.hash.split('#')[1].split("?")[0];
 
-  let response = await fetch("http://127.0.0.1:5000/plants", {
-    method: 'POST',
-    body: JSON.stringify(data),
-    headers: {
+  switch (action) {
+    case "Plants":
+      await LoadPage("Plants");
+        let response = await ServerRequest("GetPlants", {});
+        if (response.status === 200) {
+          let plants = await response.json();
+          renderPlants(plants);
+        }
+        else {
+          document.getElementById("content-block").innerHTML = "<h1>ERROR</h1>";
+        }
+      break;
+
+    case "AddPlant":
+      await LoadPage("AddPlant");
+      
+  }
+});
+
+async function LoadPage(action) {
+  let response = await ServerRequest("GetPage", {"Page": action});
+  if (response.status == 200) {
+    let html = await response.text();
+    document.getElementById("content-block").innerHTML = html;
+  }
+  else {
+    document.getElementById("content-block").innerHTML = "<h1>ERROR</h1>";
+  }
+}
+
+async function ServerRequest(action, actionData) {
+  data = {
+    "action": action,
+    "actionData": actionData
+  }
+  return await fetch("http://127.0.0.1:5000/", {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
         'Content-Type': 'application/json; charset=UTF-8'
     }
   });
-  return response.status;
 }
 
 function CheckSQLInput(input) {
@@ -115,13 +75,6 @@ function formatDate(inputDateStr) {
   return `${day}.${month}.${year}`;
 }
 
-async function LoadPlants() {
-  let response = await fetch("http://127.0.0.1:5000/plants");
-  if (response.status === 200) {
-    let plants = await response.json();
-    renderPlants(plants);
-  }
-}
 
 function renderPlants(data) {
   const contentArea = document.getElementById('content-area');
@@ -182,57 +135,5 @@ function renderPlants(data) {
   });
 }
 
-function displayPlantData(name, scienceName, place, photoBase64) {
-  const contentArea = document.getElementById('content-area');
 
-  // Создаем карточку растения
-  const plantCard = document.createElement('div');
-  plantCard.classList.add('plant-card-static');
 
-  // Добавляем фото
-  const photoElement = document.createElement('img');
-  photoElement.src = `data:image/jpeg;base64,${photoBase64}`; // base64 строка
-  photoElement.alt = name;
-  plantCard.appendChild(photoElement);
-
-  // Добавляем название
-  const nameElement = document.createElement('h3');
-  nameElement.classList.add('plant-name');
-  nameElement.textContent = name;
-  plantCard.appendChild(nameElement);
-
-  // Добавляем научное название
-  const scienceNameElement = document.createElement('p');
-  scienceNameElement.textContent = `Scientific Name: ${scienceName}`;
-  plantCard.appendChild(scienceNameElement);
-
-  const placeElement = document.createElement('p');
-  placeElement.textContent = `Place: ${place}`;
-  plantCard.appendChild(placeElement);
-
-  // Добавляем блок для связанных задач
-  const tasksBlock = document.createElement('div');
-  tasksBlock.classList.add('related-block');
-  const tasksTitle = document.createElement('h4');
-  tasksTitle.textContent = 'Related Tasks';
-  tasksBlock.appendChild(tasksTitle);
-  const tasksPlaceholder = document.createElement('p');
-  tasksPlaceholder.textContent = 'No tasks added yet.';
-  tasksBlock.appendChild(tasksPlaceholder);
-
-  // Добавляем блок для связанных заметок
-  const notesBlock = document.createElement('div');
-  notesBlock.classList.add('related-block');
-  const notesTitle = document.createElement('h4');
-  notesTitle.textContent = 'Related Notes';
-  notesBlock.appendChild(notesTitle);
-  const notesPlaceholder = document.createElement('p');
-  notesPlaceholder.textContent = 'No notes added yet.';
-  notesBlock.appendChild(notesPlaceholder);
-
-  // Добавляем все элементы в content-area
-  contentArea.innerHTML = ''; // Очищаем предыдущее содержимое
-  contentArea.appendChild(plantCard);
-  contentArea.appendChild(tasksBlock);
-  contentArea.appendChild(notesBlock);
-}

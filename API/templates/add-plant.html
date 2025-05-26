@@ -1,0 +1,13 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add-plant.css') }}">
+<p id="info"></p>
+<form id="add-plant-form">
+    <label>Name</label>
+    <input type="text" id="plant-name-input" placeholder="Plant's name" required>
+    <label>Science name</label>
+    <input type="text" id="plant-science-name-input" placeholder="Plant's science name" required>
+    <label>Main photo</label>
+    <input type="file" id="plant-main-photo-input" accept="image/jpeg, image/png, image/jpg">
+    <label>Place</label>
+    <input type="number" id="plant-place-input" value="1", min="1" max="9999">
+    <button id="add-plant-submit-btn">Submit</button>
+</form>

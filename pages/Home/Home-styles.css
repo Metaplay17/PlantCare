@@ -101,7 +101,6 @@
     background-color: #388e3c;
   }
   
-  /* Main Content */
   .content {
     display: flex;
     flex-direction: column;
@@ -141,12 +140,10 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
-    flex-grow: 1;
     background-color: #f4f9f4;
     border: 1px solid #ddd;
     border-radius: 5px;
     padding: 20px;
-    overflow-y: auto;
   }
 
   .plant-card {
@@ -219,43 +216,6 @@
   font-family: Arial, sans-serif;
 }
 
-
-  /* Стиль для затемненного фона */
-.modal {
-    display: none; /* По умолчанию скрыто */
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный фон */
-    backdrop-filter: blur(5px); /* Размытие фона */
-  }
-  
-  /* Стиль для контента модального окна */
-  .modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 30px;
-    border-radius: 10px;
-    width: 400px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
-  }
-  
-  /* Заголовок модального окна */
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-  
-  .modal-header h2 {
-    font-size: 24px;
-    color: #4caf50;
-  }
-  
   .close-btn {
     background: none;
     border: none;
@@ -266,13 +226,6 @@
   
   .close-btn:hover {
     color: #388e3c;
-  }
-  
-  /* Форма внутри модального окна */
-  .modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
   }
   
   .form-group label {

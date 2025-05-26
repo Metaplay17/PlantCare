@@ -1,0 +1,69 @@
+.photo-card-main {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.photo-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 100%;
+    max-width: 50vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+    height: 70vh;
+}
+
+.photo-label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+    align-self: flex-start;
+}
+
+.plant-select {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+}
+
+.photo-block {
+    width: 100%;
+    min-height: 200px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid #ddd;
+}
+
+.image {
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.delete-btn {
+    background-color: #e53935;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.delete-btn:hover {
+    background-color: #c62828;
+}

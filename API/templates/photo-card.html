@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/photo-card.css') }}">
+<div class="photo-card-main">
+    <div class="photo-card">
+        <!-- Выбор растения -->
+        <label for="plant-select" class="photo-label">Выберите растение:</label>
+        <select id="plant-select" class="plant-select">
+            <option value="">-- Выберите растение --</option>
+        </select>
+
+        <!-- Блок с изображением -->
+        <div class="photo-block" id="photo-block">
+            <img src="" alt="Фото растения" class="image" id="image">
+        </div>
+
+        <!-- Кнопка удалить -->
+        <button class="delete-btn" id="delete-btn">Удалить</button>
+    </div>
+</div>
