@@ -12,7 +12,7 @@ db = SQLAlchemy(app)
 
 class TaskType(db.Model):
     __tablename__ = "task_types"
-    task_id = db.Column(db.Integer, primary_key=True)
+    task_type_id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.Text)
 
     def __repr__(self):
@@ -31,7 +31,7 @@ class NoteType(db.Model):
 class RepeatType(db.Model):
     __tablename__ = "repeat_types"
     repeat_type_id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(db.String(20))
+    description = db.Column(db.String(20))
 
     def __repr__(self):
         return f"<RepeatType(repeat_type_id={self.repeat_type_id})>"
@@ -72,26 +72,17 @@ class MainPhoto(db.Model):
 class Task(db.Model):
     __tablename__ = "tasks"
     task_id = db.Column(db.Integer, primary_key=True)
+    task_name = db.Column(db.String(50))
+    task_description = db.Column(db.Text)
     plant_id = db.Column(db.Integer, db.ForeignKey('plants.plant_id'))
-    task_type_id = db.Column(db.Integer, db.ForeignKey('task_types.task_id'))
+    task_type_id = db.Column(db.Integer, db.ForeignKey('task_types.task_type_id'))
     task_date = db.Column(db.Date)
     repeat_type_id = db.Column(db.Integer, db.ForeignKey('repeat_types.repeat_type_id'))
-    details = db.relationship('TaskDetail', backref='task', lazy=True)
     task_type = db.relationship('TaskType', backref='tasks')
     repeat_type = db.relationship('RepeatType', backref='tasks')
 
     def __repr__(self):
         return f"<Task(task_id={self.task_id})>"
-
-
-class TaskDetail(db.Model):
-    __tablename__ = "task_details"
-    task_detail_id = db.Column(db.Integer, primary_key=True)
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.task_id'))
-    detail = db.Column(db.Text)
-
-    def __repr__(self):
-        return f"<TaskDetail(task_detail_id={self.task_detail_id})>"
 
 
 class Note(db.Model):

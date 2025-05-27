@@ -1,0 +1,86 @@
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background-color: #f8f8f8;
+    border-bottom: 1px solid #ddd;
+}
+
+.add-btn, .filter-btn {
+    background-color: #43a047;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.add-btn:hover,
+.filter-btn:hover {
+    background-color: #388e3c;
+}
+
+.state-label {
+    margin: 0;
+    font-weight: bold;
+    color: #555;
+    font-size: 1rem;
+}
+
+/* === Сетка задач === */
+.tasks-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.task-card {
+    background-color: #c7d4f2;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.task-card:hover {
+    transform: scale(1.02);
+}
+
+.task-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.task-description {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #555;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}
+
+.task-type,
+.task-frequency {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #777;
+}

@@ -105,12 +105,26 @@ window.addEventListener('hashchange', async () => {
 
     case "Note":
         if (subject == "" || subject == null) {
-          window.location.hash = "#Photos";
+          window.location.hash = "#Tasks";
           window.dispatchEvent(new HashChangeEvent('hashchange'));
           break;
         }
 
         DisplayNote(subject);
+        break;
+
+    case "Tasks":
+        loadTasks();
+        break;
+
+    case "Task":
+        if (subject == "" || subject == null) {
+          window.location.hash = "#Tasks";
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+          break;
+        }
+
+        DisplayTask(subject);
         break;
     }
 
@@ -490,5 +504,124 @@ async function DisplayNote(note_id) {
   saveBtn.addEventListener("click", saveNoteHandler);
 }
 
+
+async function loadTasks() {
+    await LoadPage("Tasks");
+    const container = document.querySelector('.tasks-container');
+
+    try {
+        const response = await ServerRequest("GetTasks");
+        const tasks = await response.json();
+
+        if (tasks.length > 0) {
+            container.innerHTML = '';
+        }
+        console.log(tasks);
+        tasks.forEach(task => {
+            let desc;
+            if (task.task_description.length > 70) {
+              desc = task.task_description.substring(0, 70) + "...";
+            }
+            else {
+              desc = task.task_description;
+            }
+            const card = document.createElement('div');
+            card.className = 'task-card';
+
+            card.innerHTML = `
+            <div class="task-card">
+                <div class="task-content">
+                    <h3 class="task-title">${task.task_name}</h3>
+                    <p class="task-description">${desc}</p>
+                    <p class="task-type">${task.task_type}</p>
+                    <p class="task-frequency">Frequency: ${task.repeating}</p>
+                </div>
+            </div>
+            `;
+
+            card.addEventListener("click", () => {
+              window.location.hash = `#Task/${task.task_id}`;
+              window.dispatchEvent(new HashChangeEvent('hashchange'));
+            });
+
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Ошибка при загрузке задач:', error);
+        container.innerHTML = '<p>Не удалось загрузить задачи</p>';
+    }
+}
+
+
+async function DisplayTask(task_id) {
+  await LoadPage("Task");
+
+  let taskInfo = await ServerRequest("Task", {"task_id": task_id});
+  taskInfo = await taskInfo.json();
+  const nameInput = document.getElementById("task-name");
+  const descriptionInput = document.getElementById("task-description");
+  const dateInput = document.getElementById("task-date");
+  const typeSelector = document.getElementById("task-type");
+  const frequencySelector = document.getElementById("task-frequency");
+
+  let resp = await ServerRequest("GetTaskTypes", {});
+  taskTypes = await resp.json()
+  resp = await ServerRequest("GetRepeatTypes", {});
+  repeatTypes = await resp.json();
+
+  taskTypes.forEach(type => {
+    typeSelector.innerHTML += `<option value="${type.task_type_id}">${type.task_type_description}</option>\n`;
+  });
+  typeSelector.value = taskInfo.task_type_id;
+
+  repeatTypes.forEach(type => {
+    frequencySelector.innerHTML += `<option value="${type.repeat_type_id}">${type.repeat_type_description}</option>\n`;
+  });
+  frequencySelector.value = taskInfo.repeat_type_id;
+
+
+  nameInput.value = taskInfo.task_name;
+  descriptionInput.value = taskInfo.task_description;
+  dateInput.value = formatDateForInput(taskInfo.task_date);
+  
+
+  async function saveTaskHandler() {
+    if (
+      document.getElementById("task-name").value == "" ||
+      document.getElementById("task-description").value == ""
+    ) {
+      alert("ЗАПОЛНИТЕ ВСЕ ПОЛЯ");
+      return;
+    }
+
+    const response = await ServerRequest("UpdateTask", {
+      "task_id": task_id,
+      "task_name": document.getElementById("task-name").value,
+      "task_description": document.getElementById("task-description").value,
+      "task_date":  document.getElementById("task-date").value,
+      "task_type_id": typeSelector.value,
+      "repeat_type_id": frequencySelector.value
+    });
+
+    if (response.status === 200) {
+      return;
+    } else {
+      alert(`ERROR: ${response.status}`);
+    }
+  }
+
+  function GoToPlant() {
+    window.location.hash = `#Plant/${taskInfo.plant_id}`;
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  }
+
+  const saveBtn = document.getElementById("save-task-btn");
+  saveBtn.removeEventListener("click", saveTaskHandler);
+  saveBtn.addEventListener("click", saveTaskHandler);
+
+  const toPlantBtn = document.getElementById("plant-btn");
+  toPlantBtn.removeEventListener("click", GoToPlant);
+  toPlantBtn.addEventListener("click", GoToPlant);
+}
 
 

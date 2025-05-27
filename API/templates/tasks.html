@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tasks.css') }}">
+<div class="controls">
+    <a href="http://localhost/#AddTask"><button class="add-btn" id="add-btn">Add</button></a>
+    <p class="state-label">STATE</p>
+    <a href="http://localhost/#FilterTasks"><button class="filter-btn">Filter</button></a>
+</div>
+
+<div class="tasks-container">
+    <!-- Пример одной карточки задачи -->
+    <div class="task-card">
+        <div class="task-content">
+            <h3 class="task-title">Water the plants</h3>
+            <p class="task-description">Check all pots and water if soil is dry.</p>
+            <p class="task-type">Type: Watering</p>
+            <p class="task-frequency">Frequency: Daily</p>
+        </div>
+    </div>
+
+    <!-- Здесь будут динамически добавлены задачи -->
+</div>

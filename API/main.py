@@ -42,6 +42,12 @@ def core():
         elif data["actionData"]["Page"] == "Note":
             return render_template('note-card.html', css_file='note-card.css')
 
+        elif data["actionData"]["Page"] == "Tasks":
+            return render_template('tasks.html', css_file='tasks.css')
+
+        elif data["actionData"]["Page"] == "Task":
+            return render_template('task-card.html', css_file='task-card.css')
+
     elif data["action"] == "Plant":
         if "plant_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
@@ -56,6 +62,11 @@ def core():
         if "note_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
         return get_note(data["actionData"]["note_id"])
+
+    elif data["action"] == "Task":
+        if "task_id" not in data["actionData"].keys():
+            return jsonify({"status": "Bad Request"}), 400
+        return get_task(data["actionData"]["task_id"])
 
     elif data["action"] == "PlantIdByPhoto":
         if "photo_id" not in data["actionData"].keys():
@@ -86,11 +97,27 @@ def core():
     elif data["action"] == "GetNotes":
         return get_notes()
 
+    elif data["action"] == "GetTasks":
+        return get_tasks()
+
+    elif data["action"] == "GetTaskTypes":
+        return get_task_types()
+
+    elif data["action"] == "GetRepeatTypes":
+        return get_repeat_types()
+
     elif data["action"] == "AddPlant":
         return add_plant(data["actionData"])
 
     elif data["action"] == "UpdatePlant":
         return update_plant(data["actionData"])
+
+    elif data["action"] == "UpdateTask":
+        if "task_id" not in data["actionData"].keys() or "task_id" not in data["actionData"].keys() or "task_name" not in data["actionData"].keys() or "task_description" not in data["actionData"].keys() or "task_type_id" not in data["actionData"].keys() or "repeat_type_id" not in data["actionData"].keys():
+            return jsonify({"status": "Bad Request"}), 400
+        return update_task(data["actionData"]["task_id"], data["actionData"]["task_name"],
+                           data["actionData"]["task_description"], data["actionData"]["task_date"],
+                           data["actionData"]["task_type_id"], data["actionData"]["repeat_type_id"], )
 
     elif data["action"] == "UpdateNote":
         if "note_id" not in data["actionData"].keys() or "name" not in data["actionData"].keys() or "description" not in data["actionData"].keys():
@@ -102,9 +129,6 @@ def core():
 
     elif data["action"] == "AddNote":
         return add_note(data["actionData"])
-
-    elif data["action"] == "AddTask":
-        return add_task(data["actionData"])
 
 
 def get_plants():
@@ -126,9 +150,19 @@ def get_plant(plant_id):
     })
 
 
-def get_plant_id_by_photo(photo_id):
-    photo = Photo.query.filter(Photo.photo_id == photo_id).first()
-    return jsonify({"plant_id": photo.plant_id})
+def get_task(task_id):
+    t = Task.query.filter_by(task_id=task_id).first()
+    if not t:
+        return jsonify({"status": "Task Not Found"}), 404
+    return jsonify({
+            "task_id": t.task_id,
+            "plant_id": t.plant_id,
+            "task_name": t.task_name,
+            "task_description": t.task_description,
+            "task_type_id": t.task_type_id,
+            "task_date": t.task_date,
+            "repeat_type_id": t.repeat_type_id
+        })
 
 
 def get_photos():
@@ -180,6 +214,22 @@ def get_notes():
         })
 
     return jsonify(result)
+
+
+def get_tasks():
+    tasks = Task.query.all()
+    result = []
+    for t in tasks:
+        result.append({
+            "task_id": t.task_id,
+            "plant_id": t.plant_id,
+            "task_name": t.task_name,
+            "task_description": t.task_description,
+            "task_type": get_task_type_desc_by_type_id(t.task_type_id),
+            "task_date": t.task_date,
+            "repeating": get_repeat_type_desc_by_type_id(t.repeat_type_id)
+        })
+    return jsonify(result), 200
 
 
 def get_photo(photo_id):
@@ -274,6 +324,19 @@ def update_note(note_id, name, description):
     note.note_name = name
     note.description = description
 
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
+
+
+def update_task(task_id, task_name, task_description, task_date, task_type_id, repeat_type_id):
+    task = Task.query.filter_by(task_id=task_id).first()
+    if not task:
+        return jsonify({"status": "Task Not Found"}), 404
+    task.task_name = task_name
+    task.task_description = task_description
+    task.task_date = task_date
+    task.task_type_id = task_type_id
+    task.repeat_type_id = repeat_type_id
     db.session.commit()
     return jsonify({"status": "success"}), 200
 
@@ -382,17 +445,26 @@ def add_note(data):
     db.session.commit()
 
 
-def add_task(data):
-    if "plant_id" not in data.keys() or "task_id" not in data.keys() or "task_type_id" not in data.keys() \
-            or "task_detail" not in data.keys() or "repeat_type" not in data.keys():
-        return jsonify({"error": "Some attribute doesn't exist"}), 400
+def get_task_types():
+    task_types = TaskType.query.all()
+    result = []
+    for t in task_types:
+        result.append({
+            "task_type_id": t.task_type_id,
+            "task_type_description": t.description
+        })
+    return jsonify(result), 200
 
-    new_task = Task(plant_id=data["plant_id"], task_type_id=data["task_type_id"], repeat_type=data["repeat_type"])
-    new_task_detail = TaskDetail(task_id=new_task.task_id, detail=data["task_detail"])
-    new_task.details = new_task_detail
-    db.session.add(new_task)
-    db.session.add(new_task_detail)
-    db.session.commit()
+
+def get_repeat_types():
+    repeat_types = RepeatType.query.all()
+    result = []
+    for t in repeat_types:
+        result.append({
+            "repeat_type_id": t.repeat_type_id,
+            "repeat_type_description": t.description
+        })
+    return jsonify(result), 200
 
 
 app.run()
