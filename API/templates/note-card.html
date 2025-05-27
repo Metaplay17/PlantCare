@@ -1,0 +1,28 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/note-card.css') }}">
+<div class="note-card-main">
+    <div class="form-container">
+        <!-- Левая часть: Фото -->
+        <div class="left-side">
+            <div class="note-photo-block" id="note-photo-block">
+                <img src="" alt="Фото заметки" class="note-image" id="note-image">
+            </div>
+        </div>
+
+        <!-- Правая часть: Форма -->
+        <div class="right-side">
+            <div class="note-form">
+                <label for="note-title" class="note-info">Name</label>
+                <input class="def-input" type="text" id="note-name" placeholder="Enter note title" required>
+
+                <label for="note-description" class="note-info">Description</label>
+                <textarea class="def-input" id="note-description" rows="5" placeholder="Enter description" required></textarea>
+
+                <label for="note-date" class="note-info">Date</label>
+                <input class="def-input" type="date" id="note-date" disabled>
+
+                <button class="def-btn" id="save-note-btn">SAVE</button>
+                <button class="del-btn" id="delete-note-btn">DELETE</button>
+            </div>
+        </div>
+    </div>
+</div>

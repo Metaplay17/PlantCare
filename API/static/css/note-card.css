@@ -1,0 +1,107 @@
+.note-card-main {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.form-container {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+    width: 100%;
+    max-width: 90vw;
+}
+
+.left-side {
+    flex: 1;
+    min-width: 250px;
+    max-width: 350px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.note-photo-block {
+    width: 100%;
+    aspect-ratio: 3 / 4; /* Вертикальное фото */
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid #ddd;
+}
+
+.note-photo-block img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.right-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.note-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Общие стили (копируются из plant-card.css) */
+
+.note-info {
+    margin: 0;
+    font-weight: bold;
+    color: #333;
+    font-size: 1rem;
+}
+
+.def-input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    resize: vertical;
+    min-height: 40px;
+    box-sizing: border-box;
+}
+
+.def-input[type="number"],
+.def-input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.def-btn {
+    background-color: #43a047;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.del-btn {
+    background-color: #e8181c;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.def-btn:hover {
+    background-color: #388e3c;
+}

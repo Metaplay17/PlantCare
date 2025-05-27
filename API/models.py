@@ -99,9 +99,11 @@ class Note(db.Model):
     note_id = db.Column(db.Integer, primary_key=True)
     plant_id = db.Column(db.Integer, db.ForeignKey('plants.plant_id'))
     note_type_id = db.Column(db.Integer, db.ForeignKey('note_types.note_type_id'))
-    note = db.Column(db.Text)
+    note_name = db.Column(db.String(70))
+    description = db.Column(db.Text)
     photo_id = db.Column(db.Integer, db.ForeignKey('photos.photo_id'))
     note_type = db.relationship('NoteType', backref='notes')
+    date_added = db.Column(db.Date, default=date.today)
 
     def __repr__(self):
         return f"<Note(note_id={self.note_id})>"

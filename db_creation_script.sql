@@ -100,8 +100,10 @@ CREATE TABLE IF NOT EXISTS notes (
     note_id INT PRIMARY KEY DEFAULT nextval('note_id_seq'),
     plant_id INT,
     note_type_id INT,
-    note TEXT,
+    note_name VARCHAR(70),
+    description TEXT,
     photo_id INT,
+    date_added DATE,
     FOREIGN KEY (plant_id) REFERENCES plants(plant_id),
     FOREIGN KEY (note_type_id) REFERENCES note_types(note_type_id),
     FOREIGN KEY (photo_id) REFERENCES photos(photo_id)

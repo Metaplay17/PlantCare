@@ -16,7 +16,7 @@
     justify-content: space-around;
     align-items: center;
     text-align: center;
-    height: 70vh;
+    height: 80vh;
 }
 
 .photo-label {
@@ -37,7 +37,7 @@
 
 .photo-block {
     width: 100%;
-    min-height: 200px;
+    height: 40vh;
     background-color: #f0f0f0;
     border-radius: 10px;
     display: flex;
@@ -48,7 +48,7 @@
 }
 
 .image {
-    max-height: 200px;
+    max-height: 40vh;
     object-fit: contain;
     border-radius: 8px;
 }
@@ -66,4 +66,61 @@
 
 .delete-btn:hover {
     background-color: #c62828;
+}
+
+/* Стиль контейнера чекбокса */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 0.95rem;
+    color: #333;
+    cursor: pointer;
+}
+
+/* Скрываем оригинальный чекбокс */
+.checkbox-container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Кастомный чекбокс */
+.checkmark {
+    position: relative;
+    height: 20px;
+    width: 20px;
+    background-color: #eee;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: background-color 0.3s ease;
+}
+
+/* Эффект при наведении */
+.checkbox-container:hover .checkmark {
+    background-color: #ddd;
+}
+
+/* Отметка внутри чекбокса */
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 7px;
+    top: 3px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* Показываем галочку, если чекбокс отмечен */
+.checkbox-container input:checked ~ .checkmark {
+    background-color: #43a047;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+    display: block;
 }

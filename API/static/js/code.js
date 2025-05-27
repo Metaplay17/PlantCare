@@ -99,7 +99,21 @@ window.addEventListener('hashchange', async () => {
 
         DisplayPhoto(subject);
         break;
+    case "Notes":
+      loadNotes();
+      break;
+
+    case "Note":
+        if (subject == "" || subject == null) {
+          window.location.hash = "#Photos";
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+          break;
+        }
+
+        DisplayNote(subject);
+        break;
     }
+
       
 
 });
@@ -152,6 +166,21 @@ function formatDate(inputDateStr) {
   const year = date.getFullYear();
 
   return `${day}.${month}.${year}`;
+}
+
+function formatDateForInput(inputDateStr) {
+  const date = new Date(inputDateStr);
+
+  // Проверяем, что дата корректна
+  if (isNaN(date.getTime())) {
+      throw new Error("Некорректная дата");
+  }
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Месяцы начинаются с 0
+  const year = date.getFullYear();
+
+  return `${year}-${month}-${day}`;
 }
 
 
@@ -223,26 +252,36 @@ async function DisplayPlant(plant_id) {
   document.getElementById("plant-science-name").value = plantInfo.science_name;
   document.getElementById("plant-place").value = Math.floor(plantInfo.place);
   document.getElementById("image-block").innerHTML = `<img src=data:image/jpeg;base64,${plantInfo.main_photo}>`
-  document.getElementById("save-btn").addEventListener("click", async () => {
-    if (document.getElementById("plant-name").value == "" || document.getElementById("plant-science-name").value == "" || document.getElementById("plant-place").value == "") {
+
+  async function savePlantHandler() {
+    if (
+      document.getElementById("plant-name").value == "" ||
+      document.getElementById("plant-science-name").value == "" ||
+      document.getElementById("plant-place").value == ""
+    ) {
       document.getElementById("info").innerHTML = "ЗАПОЛНИТЕ ВСЕ ПОЛЯ";
       return;
     }
-    let response = await ServerRequest("UpdatePlant", {
+
+    const response = await ServerRequest("UpdatePlant", {
       "plant_id": plant_id,
       "plant_name": document.getElementById("plant-name").value,
       "plant_science_name": document.getElementById("plant-science-name").value,
       "plant_place": document.getElementById("plant-place").value
     });
-    if (response.status == 200) {
+
+    if (response.status === 200) {
       return;
-    }
-    else {
+    } else {
       document.getElementById("info").innerHTML = `ERROR: ${response.status}`;
-      return;
     }
-  });
-}
+  }
+
+  // Перед добавлением — удалим старый обработчик
+  const saveBtn = document.getElementById("save-btn");
+  saveBtn.removeEventListener("click", savePlantHandler);
+  saveBtn.addEventListener("click", savePlantHandler);
+  }
 
 async function loadPhotos() {
     await LoadPage("Photos");
@@ -281,15 +320,32 @@ async function loadPhotos() {
 
 async function DisplayPhoto(photo_id) {
     await LoadPage("Photo");
+    
     let photoInfo = await ServerRequest("Photo", {"photo_id": photo_id});
     photoInfo = await photoInfo.json();
     let plants = await ServerRequest("GetPlants", {});
     plants = await plants.json();
     const selector = document.getElementById("plant-select");
+    let plant_id = await ServerRequest("PlantIdByPhoto", {"photo_id": photo_id});
+    plant_id = await plant_id.json();
+    plant_id = plant_id["plant_id"];
+    let checkbox = document.getElementById("is-main-photo-checkbox");
+
+
+    let resp = await ServerRequest("IsMainPhoto", {"plant_id": plant_id, "photo_id": photo_id});
+    let json = await resp.json();
+    if (resp.status != 200) {
+        alert(`ERROR: ${json["status"]}`);
+    }
+    else {
+        checkbox.checked = json["isMainPhoto"];
+    }
+
+
     plants.forEach(plant => {
       selector.innerHTML += `<option value="${plant.plant_id}">${plant.name}</option>\n`;
     });
-    console.log(photoInfo);
+    selector.value = plant_id;
     document.getElementById("photo-block").innerHTML = `<img class="image" id="image" src=data:image/jpeg;base64,${photoInfo.image}>`;
     document.getElementById("delete-btn").addEventListener("click", async () => {
       let resp = await ServerRequest("DeletePhoto", {"photo_id": photo_id});
@@ -301,6 +357,137 @@ async function DisplayPhoto(photo_id) {
         alert(`ERROR: ${resp.status}`);
       }
     });
+
+
+    // Удаляем предыдущий обработчик, если он существует
+    if (checkbox.changeHandler) {
+        checkbox.removeEventListener("change", checkbox.changeHandler);
+    }
+
+    // Добавляем новый обработчик
+    checkbox.changeHandler = async () => {
+        let resp = await ServerRequest("ChangeMainPhoto", {"plant_id": selector.value, "photo_id": photo_id, "selected": checkbox.checked});
+        let json = await resp.json();
+        if (resp.status != 200) {
+            alert(`ERROR: ${json["status"]}`);
+        }
+    };
+
+    checkbox.addEventListener("change", checkbox.changeHandler);
+
+
+        // Удаляем предыдущий обработчик, если он существует
+    if (selector.changeHandler) {
+        selector.removeEventListener("change", selector.changeHandler);
+    }
+
+    // Добавляем новый обработчик
+    selector.changeHandler = async () => {
+        let resp = await ServerRequest("IsMainPhoto", {"plant_id": selector.value, "photo_id": photo_id});
+        let json = await resp.json();
+        if (resp.status != 200) {
+            alert(`ERROR: ${json["status"]}`);
+        }
+        else {
+            checkbox.checked = json["isMainPhoto"];
+        }
+        resp = await ServerRequest("ChangePlantPhoto", {"plant_id": selector.value, "photo_id": photo_id});
+        json = await resp.json();
+        if (resp.status != 200) {
+            alert(`ERROR: ${json["status"]}`);
+        }
+    };
+
+    selector.addEventListener("change", selector.changeHandler);
+  }
+
+async function loadNotes() {
+    await LoadPage("Notes");
+    const container = document.querySelector('.notes-container');
+
+    try {
+        const response = await ServerRequest("GetNotes");
+        const notes = await response.json(); // предполагается массив объектов
+
+        if (notes.length > 0) {
+            container.innerHTML = '';
+        }
+
+        notes.forEach(note => {
+          let desc;
+            if (note.description.length > 70) {
+              desc = note.description.substring(0, 70) + "...";
+            }
+            else {
+              desc = note.description;
+            }
+            const card = document.createElement('div');
+            card.className = 'note-card';
+
+            card.innerHTML = `
+                <div class="note-image">
+                    <img src="data:image/jpeg;base64,${note.image}" alt="Фото заметки">
+                </div>
+                <div class="note-content">
+                    <h3 class="note-title">${note.note_name}</h3>
+                    <p class="note-description">${desc}</p>
+                    <p class="note-date">${formatDate(note.date)}</p>
+                </div>
+            `;
+
+            card.addEventListener("click", () => {
+              window.location.hash = `#Note/${note.note_id}`;
+              window.dispatchEvent(new HashChangeEvent('hashchange'));
+            });
+
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Ошибка при загрузке заметок:', error);
+        container.innerHTML = '<p>Не удалось загрузить заметки</p>';
+    }
+}
+
+async function DisplayNote(note_id) {
+  await LoadPage("Note");
+
+  let noteInfo = await ServerRequest("Note", {"note_id": note_id});
+  noteInfo = await noteInfo.json();
+  const nameInput = document.getElementById("note-name");
+  const descriptionInput = document.getElementById("note-description");
+  const dateInput = document.getElementById("note-date");
+  let imageBlock = document.getElementById("note-photo-block");
+
+  nameInput.value = noteInfo.name;
+  descriptionInput.value = noteInfo.description;
+  dateInput.value = formatDateForInput(noteInfo.date_added);
+  imageBlock.innerHTML = `<img src=data:image/jpeg;base64,${noteInfo.image}>`;
+
+  async function saveNoteHandler() {
+    if (
+      document.getElementById("note-name").value == "" ||
+      document.getElementById("note-description").value == ""
+    ) {
+      alert("ЗАПОЛНИТЕ ВСЕ ПОЛЯ");
+      return;
+    }
+
+    const response = await ServerRequest("UpdateNote", {
+      "note_id": note_id,
+      "name": document.getElementById("note-name").value,
+      "description": document.getElementById("note-description").value,
+    });
+
+    if (response.status === 200) {
+      return;
+    } else {
+      alert(`ERROR: ${response.status}`);
+    }
+  }
+
+  const saveBtn = document.getElementById("save-note-btn");
+  saveBtn.removeEventListener("click", saveNoteHandler);
+  saveBtn.addEventListener("click", saveNoteHandler);
 }
 
 

@@ -1,3 +1,4 @@
+import json
 import random
 
 from models import *
@@ -35,6 +36,12 @@ def core():
         elif data["actionData"]["Page"] == "Photo":
             return render_template('photo-card.html', css_file='photo-card.css')
 
+        elif data["actionData"]["Page"] == "Notes":
+            return render_template('notes.html', css_file='notes.css')
+
+        elif data["actionData"]["Page"] == "Note":
+            return render_template('note-card.html', css_file='note-card.css')
+
     elif data["action"] == "Plant":
         if "plant_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
@@ -45,17 +52,50 @@ def core():
             return jsonify({"status": "Bad Request"}), 400
         return get_photo(data["actionData"]["photo_id"])
 
+    elif data["action"] == "Note":
+        if "note_id" not in data["actionData"].keys():
+            return jsonify({"status": "Bad Request"}), 400
+        return get_note(data["actionData"]["note_id"])
+
+    elif data["action"] == "PlantIdByPhoto":
+        if "photo_id" not in data["actionData"].keys():
+            return jsonify({"status": "Bad Request"}), 400
+        return get_plant_id_by_photo(data["actionData"]["photo_id"])
+
+    elif data["action"] == "ChangeMainPhoto":
+        if "photo_id" not in data["actionData"].keys() or "plant_id" not in data["actionData"].keys() or "selected" not in data["actionData"]:
+            return jsonify({"status": "Bad Request"}), 400
+        return change_main_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"], data["actionData"]["selected"])
+
+    elif data["action"] == "ChangePlantPhoto":
+        if "photo_id" not in data["actionData"].keys() or "plant_id" not in data["actionData"].keys():
+            return jsonify({"status": "Bad Request"}), 400
+        return change_plant_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"])
+
+    elif data["action"] == "IsMainPhoto":
+        if "photo_id" not in data["actionData"].keys() or "plant_id" not in data["actionData"].keys():
+            return jsonify({"status": "Bad Request"}), 400
+        return is_main_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"])
+
     elif data["action"] == "GetPlants":
         return get_plants()
 
     elif data["action"] == "GetPhotos":
         return get_photos()
 
+    elif data["action"] == "GetNotes":
+        return get_notes()
+
     elif data["action"] == "AddPlant":
         return add_plant(data["actionData"])
 
     elif data["action"] == "UpdatePlant":
         return update_plant(data["actionData"])
+
+    elif data["action"] == "UpdateNote":
+        if "note_id" not in data["actionData"].keys() or "name" not in data["actionData"].keys() or "description" not in data["actionData"].keys():
+            return jsonify({"status": "Bad Request"}), 400
+        return update_note(data["actionData"]["note_id"], data["actionData"]["name"], data["actionData"]["description"])
 
     elif data["action"] == "AddPhoto":
         return add_photo(data["actionData"])
@@ -86,6 +126,11 @@ def get_plant(plant_id):
     })
 
 
+def get_plant_id_by_photo(photo_id):
+    photo = Photo.query.filter(Photo.photo_id == photo_id).first()
+    return jsonify({"plant_id": photo.plant_id})
+
+
 def get_photos():
     photos = Photo.query.all()
     result = []
@@ -107,6 +152,36 @@ def get_photos():
     return jsonify(result)
 
 
+def get_notes():
+    notes = Note.query.all()
+    result = []
+    for n in notes:
+        if n.photo_id:
+            response = get_photo(n.photo_id)
+            if response[1] != 200:
+                photo = None
+            else:
+                response_dict = get_photo(n.photo_id)[0].get_json()
+                photo = response_dict["image"]
+        else:
+            with open("static/photos/default-note.png", "rb") as image_file:
+                # 2. Читаем бинарные данные
+                image_data = image_file.read()
+
+                # 3. Кодируем в Base64 и декодируем в строку (utf-8)
+                photo = base64.b64encode(image_data).decode("utf-8")
+        result.append({
+            "note_id": n.note_id,
+            "note_type_id": n.note_type_id,
+            "image": photo,
+            "note_name": n.note_name,
+            "description": n.description,
+            "date": n.date_added
+        })
+
+    return jsonify(result)
+
+
 def get_photo(photo_id):
     photo = Photo.query.filter(Photo.photo_id == photo_id).first()
     if not photo:
@@ -122,7 +197,36 @@ def get_photo(photo_id):
         return jsonify({
             "photo_id": photo.photo_id,
             "image": image_base64
-        })
+        }), 200
+
+
+def get_note(note_id):
+    n = Note.query.filter_by(note_id=note_id).first()
+    if not n:
+        return jsonify({"status": "Note not found"}), 404
+
+    if n.photo_id:
+        response = get_photo(n.photo_id)
+        if response[1] != 200:
+            photo = None
+        else:
+            response_dict = get_photo(n.photo_id)[0].get_json()
+            photo = response_dict["image"]
+    else:
+        with open("static/photos/default-note.png", "rb") as image_file:
+            # 2. Читаем бинарные данные
+            image_data = image_file.read()
+
+            # 3. Кодируем в Base64 и декодируем в строку (utf-8)
+            photo = base64.b64encode(image_data).decode("utf-8")
+    return jsonify({
+        "note_id": n.note_id,
+        "note_type_id": n.note_type_id,
+        "image": photo,
+        "name": n.note_name,
+        "description": n.description,
+        "date_added": n.date_added
+    })
 
 
 def add_plant(data):
@@ -160,6 +264,18 @@ def update_plant(data):
 
     db.session.commit()
     return jsonify({"result": "Success"}), 200
+
+
+def update_note(note_id, name, description):
+    note = Note.query.filter_by(note_id=note_id).first()
+    if not note:
+        return jsonify({"status": "Note not found"}), 404
+
+    note.note_name = name
+    note.description = description
+
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
 
 
 def add_photo(data):
@@ -207,6 +323,52 @@ def add_main_photo(data):
     db.session.commit()
 
     return jsonify({"status": "success"}), 200
+
+
+def change_main_photo(plant_id, photo_id, selected):
+    # Находим существующую запись
+    main_photo = MainPhoto.query.filter_by(photo_id=photo_id).first()
+
+    if main_photo:
+        if not selected:
+            # Если запись существует и чекбокс не выбран, удаляем запись
+            db.session.delete(main_photo)
+            db.session.commit()
+            return jsonify({"status": "Main photo deleted"}), 200
+        else:
+            # Если запись существует и чекбокс выбран, обновляем plant_id
+            main_photo.plant_id = plant_id
+            db.session.commit()
+            return jsonify({"status": "Main photo updated"}), 200
+
+    elif selected:
+        # Если запись не существует и чекбокс выбран, создаем новую запись
+        new_main_photo = MainPhoto(photo_id=photo_id, plant_id=plant_id)
+        db.session.add(new_main_photo)
+        db.session.commit()
+        return jsonify({"status": "Main photo created"}), 200
+
+    else:
+        # Если запись не существует и чекбокс не выбран, ничего не делаем
+        return jsonify({"status": "No changes made"}), 200
+
+
+def change_plant_photo(plant_id, photo_id):
+    photo = Photo.query.filter(Photo.photo_id == photo_id).first()
+    if photo:
+        photo.plant_id = plant_id
+        db.session.commit()
+        return jsonify({"status": "success"}), 200
+
+    return jsonify({"status": "Photo not found"}), 404
+
+
+def is_main_photo(plant_id, photo_id):
+    main_photo = MainPhoto.query.filter(MainPhoto.photo_id == photo_id, MainPhoto.plant_id == plant_id).first()
+    if main_photo:
+        return jsonify({"status": "success", "isMainPhoto": True})
+    else:
+        return jsonify({"status": "success", "isMainPhoto": False})
 
 
 def add_note(data):
