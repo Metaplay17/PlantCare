@@ -206,3 +206,11 @@ body {
     font-size: 0.8em;
     color: #999;
 }
+
+.search-input {
+    padding: 5px;
+    border-radius: 5px;
+    width: 100%;
+    margin: 0 10vw;
+    font-size: 1.2vw;
+}

@@ -1,3 +1,4 @@
+import datetime
 import json
 import random
 
@@ -7,7 +8,6 @@ import os
 import base64
 from constants import *
 from utils import *
-
 
 app.config['UPLOAD_FOLDER'] = IMAGE_FOLDER
 
@@ -48,6 +48,9 @@ def core():
         elif data["actionData"]["Page"] == "Task":
             return render_template('task-card.html', css_file='task-card.css')
 
+        elif data["actionData"]["Page"] == "Calendar":
+            return render_template('calendar.html', css_file='calendar.css')
+
     elif data["action"] == "Plant":
         if "plant_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
@@ -74,9 +77,11 @@ def core():
         return get_plant_id_by_photo(data["actionData"]["photo_id"])
 
     elif data["action"] == "ChangeMainPhoto":
-        if "photo_id" not in data["actionData"].keys() or "plant_id" not in data["actionData"].keys() or "selected" not in data["actionData"]:
+        if "photo_id" not in data["actionData"].keys() or "plant_id" not in data[
+            "actionData"].keys() or "selected" not in data["actionData"]:
             return jsonify({"status": "Bad Request"}), 400
-        return change_main_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"], data["actionData"]["selected"])
+        return change_main_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"],
+                                 data["actionData"]["selected"])
 
     elif data["action"] == "ChangePlantPhoto":
         if "photo_id" not in data["actionData"].keys() or "plant_id" not in data["actionData"].keys():
@@ -90,6 +95,9 @@ def core():
 
     elif data["action"] == "GetPlants":
         return get_plants()
+
+    elif data["action"] == "GetFilteredPlants":
+        return get_filtered_plants(data["actionData"])
 
     elif data["action"] == "GetPhotos":
         return get_photos()
@@ -106,6 +114,12 @@ def core():
     elif data["action"] == "GetRepeatTypes":
         return get_repeat_types()
 
+    elif data["action"] == "GetDateTasks":
+        return get_date_tasks(str(data["actionData"]["date"]))
+
+    elif data["action"] == "GetMonthTasks":
+        return get_month_tasks(str(data["actionData"]["date"]))
+
     elif data["action"] == "AddPlant":
         return add_plant(data["actionData"])
 
@@ -113,19 +127,26 @@ def core():
         return update_plant(data["actionData"])
 
     elif data["action"] == "UpdateTask":
-        if "task_id" not in data["actionData"].keys() or "task_id" not in data["actionData"].keys() or "task_name" not in data["actionData"].keys() or "task_description" not in data["actionData"].keys() or "task_type_id" not in data["actionData"].keys() or "repeat_type_id" not in data["actionData"].keys():
+        if "task_id" not in data["actionData"].keys() or "task_id" not in data[
+            "actionData"].keys() or "task_name" not in data["actionData"].keys() or "task_description" not in data[
+            "actionData"].keys() or "task_type_id" not in data["actionData"].keys() or "repeat_type_id" not in data[
+            "actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
         return update_task(data["actionData"]["task_id"], data["actionData"]["task_name"],
                            data["actionData"]["task_description"], data["actionData"]["task_date"],
                            data["actionData"]["task_type_id"], data["actionData"]["repeat_type_id"], )
 
     elif data["action"] == "UpdateNote":
-        if "note_id" not in data["actionData"].keys() or "name" not in data["actionData"].keys() or "description" not in data["actionData"].keys():
+        if "note_id" not in data["actionData"].keys() or "name" not in data["actionData"].keys() or "description" not in \
+                data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
         return update_note(data["actionData"]["note_id"], data["actionData"]["name"], data["actionData"]["description"])
 
     elif data["action"] == "AddPhoto":
         return add_photo(data["actionData"])
+
+    elif data["action"] == "AddPhotoWithoutPlant":
+        return add_photo_without_plant(data["actionData"])
 
     elif data["action"] == "AddNote":
         return add_note(data["actionData"])
@@ -133,6 +154,13 @@ def core():
 
 def get_plants():
     plants = Plant.query.all()
+    return jsonify([{"plant_id": p.plant_id, "name": p.name, "science_name": p.science_name, "date_added": p.date_added,
+                     "place": p.place, "main_photo": get_plant_main_photo(p.plant_id)} for p in plants])
+
+
+def get_filtered_plants(data):
+    name = data["name"]
+    plants = Plant.query.filter(Plant.name.ilike(f'%{name}%') | Plant.science_name.ilike(f'%{name}%')).all()
     return jsonify([{"plant_id": p.plant_id, "name": p.name, "science_name": p.science_name, "date_added": p.date_added,
                      "place": p.place, "main_photo": get_plant_main_photo(p.plant_id)} for p in plants])
 
@@ -155,14 +183,14 @@ def get_task(task_id):
     if not t:
         return jsonify({"status": "Task Not Found"}), 404
     return jsonify({
-            "task_id": t.task_id,
-            "plant_id": t.plant_id,
-            "task_name": t.task_name,
-            "task_description": t.task_description,
-            "task_type_id": t.task_type_id,
-            "task_date": t.task_date,
-            "repeat_type_id": t.repeat_type_id
-        })
+        "task_id": t.task_id,
+        "plant_id": t.plant_id,
+        "task_name": t.task_name,
+        "task_description": t.task_description,
+        "task_type_id": t.task_type_id,
+        "task_date": t.task_date,
+        "repeat_type_id": t.repeat_type_id
+    })
 
 
 def get_photos():
@@ -230,6 +258,49 @@ def get_tasks():
             "repeating": get_repeat_type_desc_by_type_id(t.repeat_type_id)
         })
     return jsonify(result), 200
+
+
+def get_date_tasks(date):
+    day = datetime.datetime.strptime(date, "%Y-%m-%d").date().day
+    month = datetime.datetime.strptime(date, "%Y-%m-%d").date().month
+    year = datetime.datetime.strptime(date, "%Y-%m-%d").date().year
+    entries = Calendar.query.filter(
+        (extract('month', Calendar.entry_date) == month) &
+        (extract('year', Calendar.entry_date) == year) &
+        (extract('day', Calendar.entry_date) == day)
+    ).all()
+    tasks = []
+    for entry in entries:
+        task = get_task(entry.task_id).get_json()
+        calendar_task = {"task_id": task["task_id"],
+                         "task_type": get_task_type_desc_by_type_id(task["task_type_id"]),
+                         "task_name": task["task_name"]}
+        tasks.append(calendar_task)
+    return jsonify({"tasks": tasks}), 200
+
+
+def get_month_tasks(date):
+    parsed_date = datetime.datetime.fromisoformat(date.replace("Z", "+00:00"))
+    month = parsed_date.month
+    year = parsed_date.year
+
+    entries = Calendar.query.filter(
+        (extract('month', Calendar.entry_date) == month) &
+        (extract('year', Calendar.entry_date) == year)
+    ).all()
+
+    tasks = []
+    for entry in entries:
+        task = get_task(entry.task_id).get_json()
+
+        calendar_task = {
+            "task_type": get_task_type_desc_by_type_id(task["task_type_id"]),
+            "task_name": task["task_name"],
+            "task_day": entry.entry_date.day
+        }
+        tasks.append(calendar_task)
+
+    return jsonify({"tasks": tasks}), 200
 
 
 def get_photo(photo_id):
@@ -302,8 +373,8 @@ def update_plant(data):
         return jsonify({"error": "Some attributes don't exist"}), 400
 
     if Plant.query.filter(
-        (Plant.plant_id != data["plant_id"]) &
-        ((Plant.name == data["plant_name"]) | (Plant.place == data["plant_place"]))
+            (Plant.plant_id != data["plant_id"]) &
+            ((Plant.name == data["plant_name"]) | (Plant.place == data["plant_place"]))
     ).first():
         return jsonify({"error": "Some attributes conflict"}), 409
 
@@ -338,6 +409,7 @@ def update_task(task_id, task_name, task_description, task_date, task_type_id, r
     task.task_type_id = task_type_id
     task.repeat_type_id = repeat_type_id
     db.session.commit()
+    update_task_calendar(task)
     return jsonify({"status": "success"}), 200
 
 
@@ -352,10 +424,29 @@ def add_photo(data):
     if not is_allowed_image(image.filename):
         return jsonify({"error": "File type not allowed"}), 400
 
-    filename = str(Plant.query.get(data["plant_id"]).name) + str(random.randrange(1,10000))  # Добавить username
+    filename = str(Plant.query.get(data["plant_id"]).name) + str(random.randrange(1, 10000))  # Добавить username
     new_photo = Photo(plant_id=data["plant_id"], filename=filename)
 
     image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+    db.session.add(new_photo)
+    db.session.commit()
+
+    return jsonify({"status": "success"}), 200
+
+
+def add_photo_without_plant(data):
+    if 'image' not in data.keys():
+        return jsonify({"error": "No file part"}), 400
+
+    image = data["image"]
+
+    filename = "username" + str(random.randrange(1, 10000)) + ".jpg"  # Добавить username
+    new_photo = Photo(plant_id=None, filename=filename)
+    header, encoded = image.split(",", 1)
+    file_data = base64.b64decode(encoded)
+    with open(app.config["UPLOAD_FOLDER"] + filename, "wb") as f:
+        f.write(file_data)
 
     db.session.add(new_photo)
     db.session.commit()

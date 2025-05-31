@@ -1,13 +1,24 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
-<div class="calendar-container">
-<div class="calendar-header">
-    <button id="prev">◀</button>
-    <div id="month-year"></div>
-    <button id="next">▶</button>
-</div>
-<div class="calendar-days">
-    <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div>
-    <div>Пт</div><div>Сб</div><div>Вс</div>
-</div>
-<div class="calendar-dates" id="dates"></div>
+<div class="app-container">
+    <!-- Левая часть: Календарь -->
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <button id="prev">◀</button>
+            <div id="month-year"></div>
+            <button id="next">▶</button>
+        </div>
+        <div class="calendar-days">
+            <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div>
+            <div>Пт</div><div>Сб</div><div>Вс</div>
+        </div>
+        <div class="calendar-dates" id="dates"></div>
+    </div>
+
+    <!-- Правая часть: Список задач на день -->
+    <div class="tasks-panel">
+        <h2>Задачи на день</h2>
+        <div class="tasks-list" id="tasks-list">
+            <!-- Блоки задач будут добавляться динамически -->
+        </div>
+    </div>
 </div>

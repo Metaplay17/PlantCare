@@ -1,16 +1,87 @@
-
-#add-plant-form {
+/* Общие стили */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #e8f3e8; /* Светло-зеленый фон */
+    margin: 0;
+    padding: 0;
     display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    gap: 10px;
+    justify-content: center;
     align-items: center;
-    font-size: 1.5vw;
+    min-height: 100vh;
 }
 
-#add-plant-form input {
-    width: 40vw;
-    border-radius: 10px;
-    padding: 7px;
-    font-size: 2vw;
+#add-plant-form {
+    background-color: #ffffff; /* Белый фон формы */
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Легкая тень */
+    padding: 20px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Расстояние между элементами */
+}
+
+/* Стили для заголовков (label) */
+label {
+    font-size: 16px;
+    font-weight: bold;
+    color: #4a7c59; /* Темно-зеленый текст */
+}
+
+/* Стили для полей ввода */
+input[type="text"],
+input[type="number"],
+input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #a8d5b5; /* Светло-зеленая граница */
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="file"]:focus {
+    border-color: #4a7c59; /* Темно-зеленая граница при фокусе */
+    outline: none;
+}
+
+/* Стили для кнопки Submit */
+#add-plant-submit-btn {
+    background-color: #4a7c59; /* Темно-зеленый фон кнопки */
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#add-plant-submit-btn:hover {
+    background-color: #3b6448; /* Еще темнее зеленый при наведении */
+}
+
+/* Дополнительные улучшения */
+input[type="file"] {
+    background-color: #f0f8f0; /* Очень светло-зеленый фон для input file */
+}
+
+input[type="number"] {
+    appearance: none; /* Убираем стрелки числового поля */
+    -moz-appearance: textfield;
+}
+
+/* Отступы для мобильных устройств */
+@media (max-width: 600px) {
+    #add-plant-form {
+        padding: 15px;
+    }
+
+    label {
+        font-size: 14px;
+    }
 }

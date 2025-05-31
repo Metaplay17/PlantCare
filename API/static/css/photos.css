@@ -7,12 +7,14 @@
 }
 
 .photo-card {
-    position: relative;
-    overflow: hidden;
+    position: relative; /* Обязательно для позиционирования img */
+    overflow: hidden; /* Скрывает части изображения, выходящие за пределы блока */
     border-radius: 12px;
     background-color: #f0f0f0;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s ease;
+    width: 100%; /* Растягивает блок на всю ширину колонки */
+    height: 200px; /* Фиксированная высота для всех карточек */
 }
 
 .photo-card:hover {
@@ -20,8 +22,11 @@
 }
 
 .photo-card img {
-    width: 100%;
-    height: auto;
-    display: block;
-    object-fit: cover;
+    position: absolute; /* Позиционирование относительно .photo-card */
+    top: 0;
+    left: 0;
+    width: 100%; /* Занимает всю ширину блока */
+    height: 100%; /* Занимает всю высоту блока */
+    object-fit: cover; /* Сохраняет пропорции изображения */
+    border-radius: 12px; /* Чтобы углы изображения совпадали с углами блока */
 }

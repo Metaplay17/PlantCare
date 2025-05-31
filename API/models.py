@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import extract
 from datetime import date
 from flask_cors import CORS
 
@@ -98,5 +99,14 @@ class Note(db.Model):
 
     def __repr__(self):
         return f"<Note(note_id={self.note_id})>"
+
+
+class Calendar(db.Model):
+    __tablename__ = "calendar"
+    entry_id = db.Column(db.Integer, primary_key=True)
+    entry_date = db.Column(db.Date)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.task_id'))
+
+
 
 

@@ -10,15 +10,34 @@ window.addEventListener('hashchange', async () => {
   switch (action) {
     case "Plants":
       await LoadPage("Plants");
-        let response = await ServerRequest("GetPlants", {});
-        if (response.status === 200) {
-          let plants = await response.json();
-          renderPlants(plants);
+
+      const searchInput = document.getElementById("search-input");
+      const searchBtn = document.getElementById("search-btn");
+      searchBtn.addEventListener("click", async () => {
+        let searchString = searchInput.value;
+        if (searchString == '') {
+          alert("Введите название");
+          return;
         }
-        else {
-          document.getElementById("content-block").innerHTML = "<h1>ERROR</h1>";
+        let newData = await ServerRequest("GetFilteredPlants", {"name": searchString.toLowerCase()});
+        newData = await newData.json();
+        renderPlants(newData);
+      });
+
+      searchInput.addEventListener("keypress", (event) => {
+        if (event.key == "Enter") {
+          searchBtn.click();
         }
-      break;
+      });
+      let response = await ServerRequest("GetPlants", {});
+      if (response.status === 200) {
+        let plants = await response.json();
+        renderPlants(plants);
+      }
+      else {
+        document.getElementById("content-block").innerHTML = "<h1>ERROR</h1>";
+      }
+    break;
 
     case "AddPlant":
       await LoadPage("AddPlant");
@@ -79,7 +98,7 @@ window.addEventListener('hashchange', async () => {
     case "Plant":
       if (subject == "" || subject == null) {
         window.location.hash = "#Plants";
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        //window.dispatchEvent(new HashChangeEvent('hashchange'));
         break;
       }
 
@@ -93,7 +112,7 @@ window.addEventListener('hashchange', async () => {
     case "Photo":
         if (subject == "" || subject == null) {
           window.location.hash = "#Photos";
-          window.dispatchEvent(new HashChangeEvent('hashchange'));
+          //window.dispatchEvent(new HashChangeEvent('hashchange'));
           break;
         }
 
@@ -106,7 +125,7 @@ window.addEventListener('hashchange', async () => {
     case "Note":
         if (subject == "" || subject == null) {
           window.location.hash = "#Tasks";
-          window.dispatchEvent(new HashChangeEvent('hashchange'));
+          //window.dispatchEvent(new HashChangeEvent('hashchange'));
           break;
         }
 
@@ -120,12 +139,16 @@ window.addEventListener('hashchange', async () => {
     case "Task":
         if (subject == "" || subject == null) {
           window.location.hash = "#Tasks";
-          window.dispatchEvent(new HashChangeEvent('hashchange'));
+          //window.dispatchEvent(new HashChangeEvent('hashchange'));
           break;
         }
 
         DisplayTask(subject);
         break;
+
+    case "Calendar":
+      loadCalendar();
+      break;
     }
 
       
@@ -253,7 +276,7 @@ function renderPlants(data) {
 
       card.addEventListener("click", () => {
         window.location.hash = `#Plant/${plant.plant_id}`;
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        //window.dispatchEvent(new HashChangeEvent('hashchange'));
       });
   });
 }
@@ -299,28 +322,49 @@ async function DisplayPlant(plant_id) {
 
 async function loadPhotos() {
     await LoadPage("Photos");
+
+    const uploadBtn = document.getElementById("upload-btn");
+    const fileInput = document.getElementById("file-input");
+    uploadBtn.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+
+      // Читаем файл как Base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+          const base64String = e.target.result;
+
+          // Отправляем Base64 на сервер
+          let response = await ServerRequest("AddPhotoWithoutPlant", {
+            "image": base64String
+          });
+        };
+
+      reader.readAsDataURL(file); // Читаем файл как Data URL (Base64)
+    });
+
     const container = document.querySelector('.photos-container');
 
     try {
-        // Заменить на свой URL API
-        const response = await ServerRequest("GetPhotos", {}); // Примерный путь
-        const photoData = await response.json(); // Получаем массив строк base64
+        const response = await ServerRequest("GetPhotos", {});
+        const photoData = await response.json();
 
-        // Очистка контейнера перед заполнением
         container.innerHTML = '';
 
-        // Добавление фото в DOM
         photoData.forEach(photo => {
             const card = document.createElement('div');
             card.classList.add('photo-card');
 
             const img = document.createElement('img');
-            img.src = `data:image/jpeg;base64,${photo.image}`; // присваиваем напрямую, т.к. это data URL
+            img.src = `data:image/jpeg;base64,${photo.image}`;
             img.alt = 'Plant photo';
 
             img.addEventListener("click", () => {
               window.location.hash = `#Photo/${photo.photo_id}`;
-              window.dispatchEvent(new HashChangeEvent('hashchange'));
+              //window.dispatchEvent(new HashChangeEvent('hashchange'));
             });
 
             card.appendChild(img);
@@ -365,7 +409,7 @@ async function DisplayPhoto(photo_id) {
       let resp = await ServerRequest("DeletePhoto", {"photo_id": photo_id});
       if (resp.status == 200) {
         window.location.hash = "#Photos";
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        //window.dispatchEvent(new HashChangeEvent('hashchange'));
       }
       else {
         alert(`ERROR: ${resp.status}`);
@@ -451,7 +495,7 @@ async function loadNotes() {
 
             card.addEventListener("click", () => {
               window.location.hash = `#Note/${note.note_id}`;
-              window.dispatchEvent(new HashChangeEvent('hashchange'));
+              //window.dispatchEvent(new HashChangeEvent('hashchange'));
             });
 
             container.appendChild(card);
@@ -509,53 +553,75 @@ async function loadTasks() {
     await LoadPage("Tasks");
     const container = document.querySelector('.tasks-container');
 
+    // Очистка контейнера
+    container.innerHTML = '';
+
     try {
         const response = await ServerRequest("GetTasks");
         const tasks = await response.json();
 
-        if (tasks.length > 0) {
-            container.innerHTML = '';
+        if (tasks.length === 0) {
+            container.innerHTML = '<p>Нет доступных задач</p>';
+            return;
         }
-        console.log(tasks);
+
         tasks.forEach(task => {
-            let desc;
-            if (task.task_description.length > 70) {
-              desc = task.task_description.substring(0, 70) + "...";
-            }
-            else {
-              desc = task.task_description;
-            }
+            let desc = task.task_description.length > 70
+                ? task.task_description.substring(0, 70) + "..."
+                : task.task_description;
+
             const card = document.createElement('div');
             card.className = 'task-card';
+            card.dataset.taskId = task.task_id; // Добавляем ID задачи
 
-            card.innerHTML = `
-            <div class="task-card">
-                <div class="task-content">
-                    <h3 class="task-title">${task.task_name}</h3>
-                    <p class="task-description">${desc}</p>
-                    <p class="task-type">${task.task_type}</p>
-                    <p class="task-frequency">Frequency: ${task.repeating}</p>
-                </div>
-            </div>
-            `;
+            const taskContent = document.createElement('div');
+            taskContent.className = 'task-content';
 
-            card.addEventListener("click", () => {
-              window.location.hash = `#Task/${task.task_id}`;
-              window.dispatchEvent(new HashChangeEvent('hashchange'));
-            });
+            const title = document.createElement('h3');
+            title.className = 'task-title';
+            title.textContent = task.task_name;
 
+            const description = document.createElement('p');
+            description.className = 'task-description';
+            description.textContent = desc;
+
+            const type = document.createElement('p');
+            type.className = 'task-type';
+            type.textContent = task.task_type;
+
+            const frequency = document.createElement('p');
+            frequency.className = 'task-frequency';
+            frequency.textContent = `Frequency: ${task.repeating}`;
+
+            taskContent.appendChild(title);
+            taskContent.appendChild(description);
+            taskContent.appendChild(type);
+            taskContent.appendChild(frequency);
+
+            card.appendChild(taskContent);
             container.appendChild(card);
         });
+
+        // Делегирование событий
+        container.addEventListener("click", (event) => {
+            const card = event.target.closest('.task-card');
+            if (card) {
+                const taskId = card.dataset.taskId;
+                if (taskId) {
+                    window.location.hash = `#Task/${taskId}`;
+                }
+            }
+        });
+
     } catch (error) {
         console.error('Ошибка при загрузке задач:', error);
-        container.innerHTML = '<p>Не удалось загрузить задачи</p>';
+        container.innerHTML = '<p>Не удалось загрузить задачи. Попробуйте позже.</p>';
     }
 }
 
 
 async function DisplayTask(task_id) {
   await LoadPage("Task");
-
   let taskInfo = await ServerRequest("Task", {"task_id": task_id});
   taskInfo = await taskInfo.json();
   const nameInput = document.getElementById("task-name");
@@ -569,11 +635,13 @@ async function DisplayTask(task_id) {
   resp = await ServerRequest("GetRepeatTypes", {});
   repeatTypes = await resp.json();
 
+  typeSelector.innerHTML = '';
   taskTypes.forEach(type => {
     typeSelector.innerHTML += `<option value="${type.task_type_id}">${type.task_type_description}</option>\n`;
   });
   typeSelector.value = taskInfo.task_type_id;
 
+  frequencySelector.innerHTML = '';
   repeatTypes.forEach(type => {
     frequencySelector.innerHTML += `<option value="${type.repeat_type_id}">${type.repeat_type_description}</option>\n`;
   });
@@ -612,7 +680,7 @@ async function DisplayTask(task_id) {
 
   function GoToPlant() {
     window.location.hash = `#Plant/${taskInfo.plant_id}`;
-    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    //window.dispatchEvent(new HashChangeEvent('hashchange'));
   }
 
   const saveBtn = document.getElementById("save-task-btn");
@@ -622,6 +690,142 @@ async function DisplayTask(task_id) {
   const toPlantBtn = document.getElementById("plant-btn");
   toPlantBtn.removeEventListener("click", GoToPlant);
   toPlantBtn.addEventListener("click", GoToPlant);
+}
+
+async function loadCalendar() {
+  await LoadPage("Calendar");
+  const monthYear = document.getElementById("month-year");
+  const datesContainer = document.getElementById("dates");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+
+  let currentDate = new Date();
+
+  async function renderCalendar(date) {
+    let monthTasks = await ServerRequest("GetMonthTasks", {"date": date});
+    monthTasks = await monthTasks.json();
+    monthTasks = monthTasks["tasks"];
+    let daysWithTasks = new Set();
+    monthTasks.forEach(task => {
+      daysWithTasks.add(task.task_day);
+    });
+
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    // Название месяца и года
+    const monthNames = [
+      "Январь", "Февраль", "Март", "Апрель",
+      "Май", "Июнь", "Июль", "Август",
+      "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+    ];
+    monthYear.textContent = `${monthNames[month]} ${year}`;
+
+    // Первый день месяца (0 - воскресенье)
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Очистка предыдущих дат
+    datesContainer.innerHTML = "";
+
+    // Добавление пустых ячеек перед первым днём
+    for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
+      const emptyCell = document.createElement("div");
+      datesContainer.appendChild(emptyCell);
+    }
+
+    // Добавление дней
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateCell = document.createElement("div");
+      dateCell.textContent = day;
+      dateCell.dataset.date = `${year}-${month + 1}-${day}`;
+
+      // Выделение сегодняшнего дня
+      const today = new Date();
+
+      if (daysWithTasks.has(day)) {
+        dateCell.classList.add("day-with-tasks");
+      }
+
+      if (
+        day === today.getDate() &&
+        month === today.getMonth() &&
+        year === today.getFullYear()
+      ) {
+        dateCell.classList.remove("day-with-tasks");
+        dateCell.classList.add("today");
+        
+        document.querySelectorAll(".calendar-dates div").forEach((div) => {
+          div.classList.remove("selected-day");
+        });
+        dateCell.classList.add("selected-day");
+        await ShowEvents(dateCell.dataset.date);
+      }
+
+      datesContainer.appendChild(dateCell);
+    }
+  }
+
+  // Обработчики событий
+  prevBtn.addEventListener("click", () => {
+    const taskList = document.getElementById("tasks-list");
+    taskList.innerHTML = '';
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar(currentDate);
+  });
+
+  nextBtn.addEventListener("click", () => {
+    const taskList = document.getElementById("tasks-list");
+    taskList.innerHTML = '';
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar(currentDate);
+  });
+
+  datesContainer.addEventListener("click", async (event) => {
+    const target = event.target;
+
+    if (target.tagName === "DIV" && target.dataset.date) {
+      const selectedDate = target.dataset.date;
+
+      // Можно выделить выбранный день
+      document.querySelectorAll(".calendar-dates div").forEach((div) => {
+        div.classList.remove("selected-day");
+      });
+      target.classList.add("selected-day");
+
+      await ShowEvents(selectedDate);
+    }
+  });
+
+  // Инициализация
+  renderCalendar(currentDate);
+}
+
+async function ShowEvents(date) {
+  const taskList = document.getElementById("tasks-list");
+  taskList.innerHTML = '';
+  let resp = await ServerRequest("GetDateTasks", {"date": date});
+  if (resp.status != 200) {
+    alert(`ERROR: ${resp.status}`);
+    return;
+  }
+  resp = await resp.json();
+  let tasks = resp["tasks"];
+  tasks.forEach(task => {
+        const taskDiv = document.createElement("div");
+        taskDiv.className = "task-item";
+        taskDiv.onclick = () => {
+          window.location.hash = `#Task/${task.task_id}`;
+          //window.dispatchEvent(new HashChangeEvent('hashchange'));
+        }
+
+        taskDiv.innerHTML = `
+            <div class="task-title">${task.task_name}</div>
+            <div class="task-type">Тип: ${task.task_type}</div>
+        `;
+
+        taskList.appendChild(taskDiv);
+  });
 }
 
 
