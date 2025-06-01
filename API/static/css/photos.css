@@ -1,7 +1,7 @@
 .photos-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr); /* 3 колонки */
-    gap: 15px; /* расстояние между фото */
+    gap: 20px; /* расстояние между фото */
     padding: 20px;
     box-sizing: border-box;
 }
@@ -22,11 +22,19 @@
 }
 
 .photo-card img {
-    position: absolute; /* Позиционирование относительно .photo-card */
     top: 0;
     left: 0;
     width: 100%; /* Занимает всю ширину блока */
     height: 100%; /* Занимает всю высоту блока */
     object-fit: cover; /* Сохраняет пропорции изображения */
     border-radius: 12px; /* Чтобы углы изображения совпадали с углами блока */
+}
+
+.plant-select {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin: 0 10vw;
 }

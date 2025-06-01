@@ -1,16 +1,18 @@
+let plants;
+let selector;
+let resp;
+
 document.addEventListener("DOMContentLoaded", async () => {
   window.dispatchEvent(new HashChangeEvent('hashchange'));
   // Добавить вход
-});
 
-window.addEventListener('hashchange', async () => {
+  window.addEventListener('hashchange', async () => {
   let action = window.location.hash.split('#')[1].split("/")[0];
   let subject = window.location.hash.split('#')[1].split("/")[1];
 
   switch (action) {
     case "Plants":
       await LoadPage("Plants");
-
       const searchInput = document.getElementById("search-input");
       const searchBtn = document.getElementById("search-btn");
       searchBtn.addEventListener("click", async () => {
@@ -32,10 +34,46 @@ window.addEventListener('hashchange', async () => {
       let response = await ServerRequest("GetPlants", {});
       if (response.status === 200) {
         let plants = await response.json();
+
+        const sortingSelector = document.getElementById("sorting-select");
+        let sortingType = sortingSelector.value;
+        switch (sortingType) {
+          case "date-asc":
+            plants.sort((a, b) => new Date(a.date_added) - new Date(b.date_added));
+            break;
+          case "date-desc":
+            plants.sort((a, b) => new Date(b.date_added) - new Date(a.date_added));
+            break;
+          case "place-asc":
+            plants.sort((a, b) => a.place - b.place);
+            break;
+          case "place-desc":
+            plants.sort((a, b) => b.place - a.place);
+            break;
+        }
         renderPlants(plants);
+
+        sortingSelector.addEventListener("change", () => {
+          let sortingType = sortingSelector.value;
+          switch (sortingType) {
+            case "date-asc":
+              plants.sort((a, b) => new Date(a.date_added) - new Date(b.date_added));
+              break;
+            case "date-desc":
+              plants.sort((a, b) => new Date(b.date_added) - new Date(a.date_added));
+              break;
+            case "place-asc":
+              plants.sort((a, b) => a.place - b.place);
+              break;
+            case "place-desc":
+              plants.sort((a, b) => b.place - a.place);
+              break;
+          }
+          renderPlants(plants);
+        });
       }
       else {
-        document.getElementById("content-block").innerHTML = "<h1>ERROR</h1>";
+        alert("ERROR");
       }
     break;
 
@@ -95,6 +133,130 @@ window.addEventListener('hashchange', async () => {
       });
       break;
 
+    case "AddNote":
+      await LoadPage("AddNote");
+      plants = await ServerRequest("GetPlants", {});
+      plants = await plants.json();
+      selector = document.getElementById("plant-select");
+      plants.forEach(plant => {
+        selector.innerHTML += `<option value="${plant.plant_id}">${plant.name}</option>\n`;
+      });
+      document.getElementById("add-note-submit-btn").addEventListener("click", async (event) => {
+        event.preventDefault()
+        let noteName = document.getElementById("note-name-input").value.trim();
+        let noteDescription = document.getElementById("note-description-input").value.trim();
+        let plant_id = selector.value;
+        let noteDate = document.getElementById("note-date-input").value;
+
+        if (noteName == "" || noteDescription == "" || plant_id == null) {
+          alert("Заполните все поля!");
+          return;
+        }
+
+        // Обработчик для файла
+        let notePhoto = null;
+        let fileInput = document.getElementById("note-photo-input");
+
+        if (fileInput.files.length > 0) {
+            let file = fileInput.files[0];
+
+            // Используем FileReader для чтения файла в Base64
+            let reader = new FileReader();
+
+            // Создаем Promise для ожидания завершения чтения файла
+            notePhoto = new Promise((resolve, reject) => {
+                reader.onload = () => {
+                    resolve(reader.result.split(",")[1]); // Убираем префикс "data:image/jpeg;base64,"
+                };
+                reader.onerror = (error) => {
+                    reject(error);
+                };
+                reader.readAsDataURL(file); // Читаем файл как Data URL
+            });
+        } else {
+            notePhoto = null; // Если файл не выбран
+        }
+        // Ждем завершения чтения файла (если файл выбран)
+        let base64Photo = notePhoto ? await notePhoto : null;
+
+        // Отправляем данные на сервер
+        let response = await ServerRequest("AddNote", {
+            "name": noteName,
+            "description": noteDescription,
+            "plant_id": plant_id,
+            "image": base64Photo, // Файл в Base64 или null
+            "date": noteDate
+        });
+
+        // Проверяем статус ответа
+        if (response.status !== 200) {
+            alert("SERVER ERROR");
+        }
+        else {
+          window.location.hash = "#Notes";
+        }
+      });
+      break;
+
+    case "AddTask":
+      await LoadPage("AddTask");
+      let plants3 = await ServerRequest("GetPlants", {});
+      plants3 = await plants3.json();
+      let selector3 = document.getElementById("plant-select");
+      plants3.forEach(plant => {
+        selector3.innerHTML += `<option value="${plant.plant_id}">${plant.name}</option>\n`;
+      });
+
+      let typeSelector = document.getElementById("task-type-select");
+      let frequencySelector = document.getElementById("frequency-select");
+
+      let resp1 = await ServerRequest("GetTaskTypes", {});
+      let taskTypes1 = await resp1.json()
+      resp1 = await ServerRequest("GetRepeatTypes", {});
+      let repeatTypes1 = await resp1.json();
+
+      taskTypes1.forEach(type => {
+        typeSelector.innerHTML += `<option value="${type.task_type_id}">${type.task_type_description}</option>\n`;
+      });
+
+      repeatTypes1.forEach(type => {
+        frequencySelector.innerHTML += `<option value="${type.repeat_type_id}">${type.repeat_type_description}</option>\n`;
+      });
+
+      document.getElementById("add-task-submit-btn").addEventListener("click", async (event) => {
+        event.preventDefault()
+        let taskName = document.getElementById("task-name-input").value.trim();
+        let taskDescription = document.getElementById("task-description-input").value.trim();
+        let plant_id = selector3.value;
+        let taskDate = document.getElementById("task-date-input").value;
+        let taskTypeId = typeSelector.value;
+        let frequencyId = frequencySelector.value;
+
+        if (taskName == "" || taskDescription == "" || plant_id == null || taskTypeId == null || frequencyId == null) {
+          alert("Заполните все поля!");
+          return;
+        }
+
+        // Отправляем данные на сервер
+        let response = await ServerRequest("AddTask", {
+            "name": taskName,
+            "description": taskDescription,
+            "plant_id": plant_id,
+            "date": taskDate,
+            "task_type_id": taskTypeId,
+            "frequency_id": frequencyId
+        });
+
+        // Проверяем статус ответа
+        if (response.status !== 200) {
+            alert("SERVER ERROR");
+        }
+        else {
+          window.location.hash = "#Tasks";
+        }
+      });
+      break;
+
     case "Plant":
       if (subject == "" || subject == null) {
         window.location.hash = "#Plants";
@@ -106,7 +268,58 @@ window.addEventListener('hashchange', async () => {
       break;
 
     case "Photos":
-      loadPhotos();
+      await LoadPage("Photos");
+      
+      let plants1 = await ServerRequest("GetPlants", {});
+      plants1 = await plants1.json();
+      let selector1 = document.getElementById("plant-select");
+      plants1.forEach(plant => {
+        selector1.innerHTML += `<option value="${plant.plant_id}">${plant.name}</option>\n`;
+      });
+      // Удаляем предыдущий обработчик, если он существует
+      if (selector1.changeHandler) {
+          selector1.removeEventListener("change", selector1.changeHandler);
+      }
+
+      // Добавляем новый обработчик
+      selector1.changeHandler = async () => {
+          let resp = await ServerRequest("GetFilteredPhotos", {"plant_id": selector1.value});
+          let json = await resp.json();
+          if (resp.status != 200) {
+              alert(`ERROR: ${json["status"]}`);
+          }
+          else {
+            loadPhotos(json);
+          }
+      };
+      selector1.addEventListener("change", selector1.changeHandler);
+
+      const uploadBtn = document.getElementById("upload-btn");
+      const fileInput = document.getElementById("file-input");
+      uploadBtn.addEventListener("click", () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+
+        // Читаем файл как Base64
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64String = e.target.result;
+
+            // Отправляем Base64 на сервер
+            let response = await ServerRequest("AddPhotoWithoutPlant", {
+              "image": base64String
+            });
+          };
+
+        reader.readAsDataURL(file); // Читаем файл как Data URL (Base64)
+      });
+
+      const resp = await ServerRequest("GetPhotos", {});
+      const photoData = await resp.json();
+      loadPhotos(photoData);
       break;
 
     case "Photo":
@@ -119,7 +332,16 @@ window.addEventListener('hashchange', async () => {
         DisplayPhoto(subject);
         break;
     case "Notes":
-      loadNotes();
+      await LoadPage("Notes");
+      let respNotes = await ServerRequest("GetNotes");
+      let defNotes = await respNotes.json();
+      loadNotes(defNotes);
+
+      const searchNoteInput = document.getElementById("search-input");
+      searchNoteInput.addEventListener("input", async () => {
+        let notes1 = defNotes.filter(note => note.note_name.toLowerCase().includes(searchNoteInput.value.toLowerCase()));
+        loadNotes(notes1);
+      });
       break;
 
     case "Note":
@@ -133,7 +355,9 @@ window.addEventListener('hashchange', async () => {
         break;
 
     case "Tasks":
-        loadTasks();
+        let tasks1 = await ServerRequest("GetTasks", {});
+        tasks1 = await tasks1.json(); 
+        loadTasks(tasks1);
         break;
 
     case "Task":
@@ -149,10 +373,127 @@ window.addEventListener('hashchange', async () => {
     case "Calendar":
       loadCalendar();
       break;
+
+    case "FilterNotes":
+      await LoadPage("FilterNotes");
+
+      let plants = await ServerRequest("GetPlants", {});
+      plants = await plants.json();
+      const selector = document.getElementById("plant-select");
+      plants.forEach(plant => {
+        selector.innerHTML += `<option value="${plant.plant_id}">${plant.name}</option>\n`;
+      });
+
+      let notes = await ServerRequest("GetNotes", {});
+      notes = await notes.json();
+
+      document.getElementById("filter-notes-btn").addEventListener("click", async (event) => {
+        event.preventDefault();
+        let dateFrom = document.getElementById("date-from-input").value;
+        let dateTo = document.getElementById("date-from-input").value;
+        let selectedPlant = selector.value;
+
+        const filters = {
+          dateTo: dateTo,
+          dateFrom: dateFrom,
+          plant: selectedPlant
+        };
+
+        filteredNotes = notes.filter(note => {
+          return (
+            (filters.dateFrom === "" || new Date(note.date) >= filters.dateFrom) &&
+            (filters.dateTo === "" || new Date(note.date) <= filters.dateTo) &&
+            (filters.plant === "" || note.plant_id == filters.plant)
+          );
+        });
+
+        // if (dateFrom == "") {
+        //   dateFrom = "01/01/1970";
+        // }
+
+        // if (dateTo == "") {
+        //   dateTo = "01/01/2100";
+        // }
+        // if (selectedPlant == "") {
+        //   filteredNotes = notes.filter(note => new Date(note.date) >= new Date(dateFrom) && new Date(note.date) <= new Date(dateTo));
+        // }
+        // else {
+        //   filteredNotes = notes.filter(note => new Date(note.date) >= new Date(dateFrom) && new Date(note.date) <= new Date(dateTo) && note.plant_id == selectedPlant)
+        // }
+        await LoadPage("Notes");
+        loadNotes(filteredNotes);
+        history.replaceState(null, '', location.pathname + location.search + "#Notes"); // Чтобы не вызывать hashchange
+      });
+      break;
+
+      case "FilterTasks":
+        await LoadPage("FilterTasks");
+
+        let plants2 = await ServerRequest("GetPlants", {});
+        plants2 = await plants2.json();
+        const plantSelector = document.getElementById("plant-select");
+        plants2.forEach(plant => {
+          plantSelector.innerHTML += `<option value="${plant.plant_id}">${plant.name}</option>\n`;
+        });
+
+        let tasks = await ServerRequest("GetTasks", {});
+        tasks = await tasks.json();
+
+        let taskTypes = await ServerRequest("GetTaskTypes");
+        taskTypes = await taskTypes.json();
+        const taskTypeSelector = document.getElementById("task-type-select");
+        taskTypes.forEach(type => {
+          taskTypeSelector.innerHTML += `<option value="${type.task_type_id}">${type.task_type_description}</option>\n`;
+        });
+
+        const taskTypeMap = taskTypes.reduce((map, item) => {
+          map[item.task_type_description] = item.task_type_id;
+          return map;
+        }, {});
+
+        let taskFrequencies = await ServerRequest("GetRepeatTypes");
+        taskFrequencies = await taskFrequencies.json();
+        const frequencySelector1 = document.getElementById("frequency-select");
+        taskFrequencies.forEach(frequency => {
+          frequencySelector1.innerHTML += `<option value="${frequency.repeat_type_id}">${frequency.repeat_type_description}</option>\n`;
+        });
+
+        const taskFrequencyMap = taskFrequencies.reduce((map, item) => {
+          map[item.repeat_type_description] = item.repeat_type_id;
+          return map;
+        }, {});
+
+
+        document.getElementById("filter-tasks-btn").addEventListener("click", async (event) => {
+          event.preventDefault();
+          let taskType = taskTypeSelector.value;
+          let taskFrequency = frequencySelector1.value;
+          let selectedPlant = plantSelector.value;
+
+          const filters = {
+            type: taskType,
+            frequency: taskFrequency,
+            plant: selectedPlant
+          };
+
+          filteredTasks = tasks.filter(task => {
+            console.log(taskFrequencyMap[task.repeating] === filters.frequency, taskFrequencyMap[task.repeating], filters.frequency);
+            return (
+              (filters.type === "" || String(taskTypeMap[task.task_type]) === String(filters.type)) &&
+              (filters.frequency === "" || String(taskFrequencyMap[task.repeating]) === String(filters.frequency)) &&
+              (filters.plant === "" || task.plant_id == filters.plant)
+            );
+          });
+          await LoadPage("Tasks");
+          console.log(filteredTasks);
+          loadTasks(filteredTasks);
+          history.replaceState(null, '', location.pathname + location.search + "#Tasks"); // Чтобы не вызывать hashchange
+        });
+        break;
     }
+  });
 
-      
-
+  window.dispatchEvent(new HashChangeEvent('hashchange'));
 });
 
 async function LoadPage(action) {
@@ -320,40 +661,11 @@ async function DisplayPlant(plant_id) {
   saveBtn.addEventListener("click", savePlantHandler);
   }
 
-async function loadPhotos() {
-    await LoadPage("Photos");
-
-    const uploadBtn = document.getElementById("upload-btn");
-    const fileInput = document.getElementById("file-input");
-    uploadBtn.addEventListener("click", () => {
-      fileInput.click();
-    });
-
-    fileInput.addEventListener("change", (event) => {
-      const file = event.target.files[0];
-
-      // Читаем файл как Base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-          const base64String = e.target.result;
-
-          // Отправляем Base64 на сервер
-          let response = await ServerRequest("AddPhotoWithoutPlant", {
-            "image": base64String
-          });
-        };
-
-      reader.readAsDataURL(file); // Читаем файл как Data URL (Base64)
-    });
-
+async function loadPhotos(photoData) {
     const container = document.querySelector('.photos-container');
 
     try {
-        const response = await ServerRequest("GetPhotos", {});
-        const photoData = await response.json();
-
         container.innerHTML = '';
-
         photoData.forEach(photo => {
             const card = document.createElement('div');
             card.classList.add('photo-card');
@@ -434,7 +746,7 @@ async function DisplayPhoto(photo_id) {
     checkbox.addEventListener("change", checkbox.changeHandler);
 
 
-        // Удаляем предыдущий обработчик, если он существует
+    // Удаляем предыдущий обработчик, если он существует
     if (selector.changeHandler) {
         selector.removeEventListener("change", selector.changeHandler);
     }
@@ -457,20 +769,15 @@ async function DisplayPhoto(photo_id) {
     };
 
     selector.addEventListener("change", selector.changeHandler);
+
+    
   }
 
-async function loadNotes() {
-    await LoadPage("Notes");
+async function loadNotes(notes) {
     const container = document.querySelector('.notes-container');
+    container.innerHTML = '';
 
     try {
-        const response = await ServerRequest("GetNotes");
-        const notes = await response.json(); // предполагается массив объектов
-
-        if (notes.length > 0) {
-            container.innerHTML = '';
-        }
-
         notes.forEach(note => {
           let desc;
             if (note.description.length > 70) {
@@ -508,9 +815,17 @@ async function loadNotes() {
 
 async function DisplayNote(note_id) {
   await LoadPage("Note");
-
   let noteInfo = await ServerRequest("Note", {"note_id": note_id});
   noteInfo = await noteInfo.json();
+
+  let plants = await ServerRequest("GetPlants", {});
+  plants = await plants.json();
+  const selector = document.getElementById("plant-select");
+  plants.forEach(plant => {
+    selector.innerHTML += `<option value="${plant.plant_id}">${plant.name}</option>\n`;
+  });
+  selector.value = noteInfo.plant_id;
+
   const nameInput = document.getElementById("note-name");
   const descriptionInput = document.getElementById("note-description");
   const dateInput = document.getElementById("note-date");
@@ -534,6 +849,7 @@ async function DisplayNote(note_id) {
       "note_id": note_id,
       "name": document.getElementById("note-name").value,
       "description": document.getElementById("note-description").value,
+      "plant_id": selector.value
     });
 
     if (response.status === 200) {
@@ -546,10 +862,20 @@ async function DisplayNote(note_id) {
   const saveBtn = document.getElementById("save-note-btn");
   saveBtn.removeEventListener("click", saveNoteHandler);
   saveBtn.addEventListener("click", saveNoteHandler);
+
+  document.getElementById("delete-note-btn").addEventListener("click", async () => {
+    let resp = await ServerRequest("DeleteNote", {"note_id": note_id});
+    if (resp.status != 200) {
+      alert(`ERROR:  ${resp.status}`);
+    }
+    else {
+      window.location.hash = "#Notes";
+    }
+  });
 }
 
 
-async function loadTasks() {
+async function loadTasks(tasks) {
     await LoadPage("Tasks");
     const container = document.querySelector('.tasks-container');
 
@@ -557,9 +883,6 @@ async function loadTasks() {
     container.innerHTML = '';
 
     try {
-        const response = await ServerRequest("GetTasks");
-        const tasks = await response.json();
-
         if (tasks.length === 0) {
             container.innerHTML = '<p>Нет доступных задач</p>';
             return;
@@ -622,8 +945,18 @@ async function loadTasks() {
 
 async function DisplayTask(task_id) {
   await LoadPage("Task");
+
+  plants = await ServerRequest("GetPlants", {});
+  plants = await plants.json();
+  selector = document.getElementById("plant-select");
+  plants.forEach(plant => {
+    selector.innerHTML += `<option value="${plant.plant_id}">${plant.name}</option>\n`;
+  });
+
   let taskInfo = await ServerRequest("Task", {"task_id": task_id});
   taskInfo = await taskInfo.json();
+
+  selector.value = taskInfo.plant_id;
   const nameInput = document.getElementById("task-name");
   const descriptionInput = document.getElementById("task-description");
   const dateInput = document.getElementById("task-date");
@@ -664,6 +997,7 @@ async function DisplayTask(task_id) {
 
     const response = await ServerRequest("UpdateTask", {
       "task_id": task_id,
+      "plant_id": selector.value,
       "task_name": document.getElementById("task-name").value,
       "task_description": document.getElementById("task-description").value,
       "task_date":  document.getElementById("task-date").value,
@@ -690,6 +1024,16 @@ async function DisplayTask(task_id) {
   const toPlantBtn = document.getElementById("plant-btn");
   toPlantBtn.removeEventListener("click", GoToPlant);
   toPlantBtn.addEventListener("click", GoToPlant);
+
+  document.getElementById("delete-task-btn").addEventListener("click", async () => {
+    let resp = await ServerRequest("DeleteTask", {"task_id": task_id});
+    if (resp.status != 200) {
+      alert(`ERROR:  ${resp.status}`);
+    }
+    else {
+      window.location.hash = "#Tasks";
+    }
+  });
 }
 
 async function loadCalendar() {

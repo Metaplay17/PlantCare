@@ -1,0 +1,34 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add-task.css') }}">
+<form id="add-task-form">
+    <div class="form-columns">
+        <div class="form-column">
+            <label>Task Name</label>
+            <input type="text" id="task-name-input" placeholder="Enter task name" required>
+            
+            <label>Plant</label>
+            <select id="plant-select" required>
+                <option value="" disabled selected>Select a plant</option>
+            </select>
+            
+            <label>Date</label>
+            <input type="date" id="task-date-input">
+        </div>
+        
+        <div class="form-column">
+            <label>Task Type</label>
+            <select id="task-type-select" required>
+                <option value="" disabled selected>Select task type</option>
+            </select>
+            
+            <label>Frequency</label>
+            <select id="frequency-select" required>
+                <option value="" disabled selected>Select frequency</option>
+            </select>
+        </div>
+    </div>
+    
+    <label>Description</label>
+    <textarea id="task-description-input" placeholder="Describe the task..." rows="4"></textarea>
+    
+    <button id="add-task-submit-btn">Add Task</button>
+</form>

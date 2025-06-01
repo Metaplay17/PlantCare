@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add-note.css') }}">
+<form id="add-note-form">
+    <label>Title</label>
+    <input type="text" id="note-name-input" placeholder="Note title" required>
+    
+    <label>Description</label>
+    <textarea id="note-description-input" placeholder="Write your note here..." rows="4" required></textarea>
+    
+    <label>Photo</label>
+    <input type="file" id="note-photo-input" accept="image/jpeg, image/png, image/jpg">
+    
+    <label>Plant</label>
+    <select id="plant-select" required>
+        <option value="" disabled selected>Select a plant</option>
+    </select>
+    
+    <label>Date</label>
+    <input type="date" id="note-date-input" required>
+    
+    <button id="add-note-submit-btn">Submit</button>
+</form>

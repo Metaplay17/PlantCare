@@ -1,0 +1,138 @@
+/* Общие стили */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #e8f3e8;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#add-task-form {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Двухколоночная структура */
+.form-columns {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+}
+
+.form-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Стили для элементов формы (остаются прежними) */
+label {
+    font-size: 16px;
+    font-weight: bold;
+    color: #4a7c59;
+}
+
+input[type="text"],
+input[type="date"],
+textarea,
+select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #a8d5b5;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+textarea:focus,
+select:focus {
+    border-color: #4a7c59; /* Темно-зеленая граница при фокусе */
+    outline: none;
+}
+
+/* Специальные стили для textarea */
+textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+/* Стили для select */
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234a7c59'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 15px;
+    padding-right: 30px;
+}
+
+/* Стили для кнопки Submit */
+#add-task-submit-btn {
+    background-color: #4a7c59; /* Темно-зеленый фон кнопки */
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 15px;
+}
+
+#add-task-submit-btn:hover {
+    background-color: #3b6448; /* Еще темнее зеленый при наведении */
+}
+
+/* Стили для поля даты */
+input[type="date"] {
+    appearance: none;
+    padding-right: 10px;
+}
+
+/* Кастомизация для разных браузеров */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5) sepia(1) saturate(5) hue-rotate(100deg);
+    cursor: pointer;
+}
+
+/* Дополнительные стили для лучшего отображения */
+select:required:invalid {
+    color: #6c757d;
+}
+
+option[value=""][disabled] {
+    display: none;
+}
+
+option {
+    color: #000;
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 600px) {
+    .form-columns {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    #add-task-form {
+        max-width: 400px;
+        padding: 20px;
+    }
+}

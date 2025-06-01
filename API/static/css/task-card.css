@@ -2,67 +2,95 @@
     display: flex;
     justify-content: center;
     padding: 20px;
+    width: 100%;
 }
 
 .task-card {
     background-color: #ffffff;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+    padding: 25px;
     width: 100%;
-    max-width: 60vw;
+    max-width: 800px; /* Увеличили максимальную ширину */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    text-align: left;
+}
+
+.task-columns {
+    display: flex;
+    gap: 25px;
+    width: 100%;
+}
+
+.task-column {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 15px;
-    text-align: left;
 }
 
 .task-label {
     font-weight: bold;
     margin-bottom: 5px;
     color: #333;
-    align-self: flex-start;
+    font-size: 0.95rem;
 }
 
 .task-input,
 .task-select,
 .task-textarea {
     width: 100%;
-    padding: 10px;
+    padding: 10px 12px;
     font-size: 1rem;
     border-radius: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     box-sizing: border-box;
-    resize: vertical;
-    min-height: 40px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.task-input:focus,
+.task-select:focus,
+.task-textarea:focus {
+    border-color: #43a047;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 160, 71, 0.2);
 }
 
 .task-select {
-    appearance: auto;
-    -webkit-appearance: auto;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2343a047'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 15px;
+    padding-right: 35px;
 }
 
 .task-textarea {
-    min-height: 50px;
+    min-height: 100px;
     font-family: inherit;
+    resize: vertical;
 }
 
 .task-actions {
     display: flex;
-    justify-content: space-between;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 15px;
     margin-top: 10px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
 }
 
 .save-btn,
 .delete-btn {
-    flex: 1;
     padding: 10px 20px;
-    font-size: 1rem;
-    border-radius: 8px;
+    font-size: 0.95rem;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
     border: none;
+    min-width: 100px;
 }
 
 .save-btn {
@@ -72,6 +100,7 @@
 
 .save-btn:hover {
     background-color: #388e3c;
+    transform: translateY(-1px);
 }
 
 .delete-btn {
@@ -81,4 +110,22 @@
 
 .delete-btn:hover {
     background-color: #c62828;
+    transform: translateY(-1px);
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    .task-columns {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .task-card {
+        max-width: 95vw;
+        padding: 20px;
+    }
+    
+    .task-actions {
+        justify-content: space-between;
+    }
 }

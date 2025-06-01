@@ -20,15 +20,6 @@ class TaskType(db.Model):
         return f"<TaskType(task_id={self.task_id})>"
 
 
-class NoteType(db.Model):
-    __tablename__ = "note_types"
-    note_type_id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.Text)
-
-    def __repr__(self):
-        return f"<NoteType(note_type_id={self.note_type_id})>"
-
-
 class RepeatType(db.Model):
     __tablename__ = "repeat_types"
     repeat_type_id = db.Column(db.Integer, primary_key=True)
@@ -90,11 +81,9 @@ class Note(db.Model):
     __tablename__ = "notes"
     note_id = db.Column(db.Integer, primary_key=True)
     plant_id = db.Column(db.Integer, db.ForeignKey('plants.plant_id'))
-    note_type_id = db.Column(db.Integer, db.ForeignKey('note_types.note_type_id'))
     note_name = db.Column(db.String(70))
     description = db.Column(db.Text)
     photo_id = db.Column(db.Integer, db.ForeignKey('photos.photo_id'))
-    note_type = db.relationship('NoteType', backref='notes')
     date_added = db.Column(db.Date, default=date.today)
 
     def __repr__(self):

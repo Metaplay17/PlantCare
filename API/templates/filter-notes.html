@@ -1,0 +1,15 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/filter-notes.css') }}">
+<form id="filter-note-form">  
+    <label>Plant</label>
+    <select id="plant-select">
+        <option value="" disabled selected>Select a plant</option>
+    </select>
+    
+    <label>Date From</label>
+    <input type="date" id="date-from-input">
+
+    <label>Date To</label>
+    <input type="date" id="date-to-input">
+    
+    <button id="filter-notes-btn">Filter</button>
+</form>

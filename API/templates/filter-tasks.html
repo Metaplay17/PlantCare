@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/filter-tasks.css') }}">
+<form id="filter-task-form">  
+    <label>Plant</label>
+    <select id="plant-select">
+        <option value="" disabled selected>Select a plant</option>
+    </select>
+    
+    <label>Task Type</label>
+    <select id="task-type-select">
+        <option value="" disabled selected>Select task type</option>
+    </select>
+
+    <label>Task Frequency</label>
+    <select id="frequency-select">
+        <option value="" disabled selected>Select frequency</option>
+    </select>
+    
+    <button id="filter-tasks-btn">Filter</button>
+</form>

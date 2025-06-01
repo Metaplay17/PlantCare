@@ -108,6 +108,7 @@ body {
 .content {
     display: flex;
     flex-direction: column;
+    align-items: center;
     height: calc(100vh - 100px); /* Вычитаем высоту header'а (~100px) */
     overflow-y: auto; /* Добавляем прокрутку для контента */
 }
@@ -119,6 +120,7 @@ body {
 /* Controls */
 .controls {
     display: flex;
+    width: 100%;
     justify-content: space-between;
     align-items: center;
     padding: 20px;
@@ -211,6 +213,17 @@ body {
     padding: 5px;
     border-radius: 5px;
     width: 100%;
-    margin: 0 10vw;
+    margin: 0 2vw;
     font-size: 1.2vw;
+}
+
+.sorting-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    margin: 2vw;
 }

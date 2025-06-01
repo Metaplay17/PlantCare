@@ -1,31 +1,41 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/task-card.css') }}">
 <div class="task-card-main">
     <div class="task-card">
-        <!-- Название задачи -->
-        <label for="task-title" class="task-label">Название задачи:</label>
-        <input type="text" id="task-name" class="task-input" placeholder="Введите название задачи">
+        <div class="task-columns">
+            <!-- Левая колонка -->
+            <div class="task-column">
+                <!-- Название задачи -->
+                <label for="task-title" class="task-label">Название задачи:</label>
+                <input type="text" id="task-name" class="task-input" placeholder="Введите название задачи">
 
-        <!-- Описание задачи -->
-        <label for="task-description" class="task-label">Описание задачи:</label>
-        <textarea id="task-description" class="task-textarea" rows="3" placeholder="Введите описание задачи"></textarea>
+                <!-- Описание задачи -->
+                <label for="task-description" class="task-label">Описание задачи:</label>
+                <textarea id="task-description" class="task-textarea" rows="3" placeholder="Введите описание задачи"></textarea>
+            </div>
 
-        <!-- Дата задачи -->
-        <label for="task-date" class="task-label">Дата задачи:</label>
-        <input type="date" id="task-date" class="task-input">
+            <!-- Правая колонка -->
+            <div class="task-column">
+                <!-- Тип задачи -->
+                <label for="plant-select" class="task-label">Растение:</label>
+                <select id="plant-select" class="task-select">
+                    <option value="" disabled selected>Select plant</option>
+                </select>
 
-        <!-- Тип задачи -->
-        <label for="task-type" class="task-label">Тип задачи:</label>
-        <select id="task-type" class="task-select">
+                <!-- Дата задачи -->
+                <label for="task-date" class="task-label">Дата задачи:</label>
+                <input type="date" id="task-date" class="task-input">
 
-        </select>
+                <!-- Тип задачи -->
+                <label for="task-type" class="task-label">Тип задачи:</label>
+                <select id="task-type" class="task-select"></select>
 
-        <!-- Периодичность -->
-        <label for="task-frequency" class="task-label">Периодичность:</label>
-        <select id="task-frequency" class="task-select">
+                <!-- Периодичность -->
+                <label for="task-frequency" class="task-label">Периодичность:</label>
+                <select id="task-frequency" class="task-select"></select>
+            </div>
+        </div>
 
-        </select>
-
-        <!-- Кнопки -->
+        <!-- Кнопки (остаются внизу) -->
         <div class="task-actions">
             <button class="save-btn" id="plant-btn">Растение</button>
             <button class="save-btn" id="save-task-btn">Сохранить</button>

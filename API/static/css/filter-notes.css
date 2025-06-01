@@ -10,7 +10,7 @@ body {
     min-height: 100vh;
 }
 
-#add-plant-form {
+#filter-note-form {
     background-color: #ffffff; /* Белый фон формы */
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Легкая тень */
@@ -20,6 +20,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px; /* Расстояние между элементами */
+    margin-top: 20px;
 }
 
 /* Стили для заголовков (label) */
@@ -31,7 +32,9 @@ label {
 
 /* Стили для полей ввода */
 input[type="text"],
-input[type="number"],
+input[type="date"],
+textarea,
+select,
 input[type="file"] {
     width: 100%;
     padding: 10px;
@@ -39,17 +42,37 @@ input[type="file"] {
     border-radius: 8px;
     font-size: 14px;
     transition: border-color 0.3s ease;
+    box-sizing: border-box;
 }
 
 input[type="text"]:focus,
-input[type="number"]:focus,
+input[type="date"]:focus,
+textarea:focus,
+select:focus,
 input[type="file"]:focus {
     border-color: #4a7c59; /* Темно-зеленая граница при фокусе */
     outline: none;
 }
 
+/* Специальные стили для textarea */
+textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+}
+
+/* Стили для select */
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234a7c59'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 15px;
+    padding-right: 30px;
+}
+
 /* Стили для кнопки Submit */
-#add-plant-submit-btn {
+#filter-notes-btn {
     background-color: #4a7c59; /* Темно-зеленый фон кнопки */
     color: white;
     font-size: 16px;
@@ -59,9 +82,10 @@ input[type="file"]:focus {
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+    margin-top: 10px;
 }
 
-#add-plant-submit-btn:hover {
+#filter-notes-btn:hover {
     background-color: #3b6448; /* Еще темнее зеленый при наведении */
 }
 
@@ -70,7 +94,13 @@ input[type="file"] {
     background-color: #f0f8f0; /* Очень светло-зеленый фон для input file */
 }
 
-input[type="number"] {
-    appearance: none; /* Убираем стрелки числового поля */
-    -moz-appearance: textfield;
+input[type="date"] {
+    appearance: none;
+    padding-right: 10px;
+}
+
+/* Кастомизация для разных браузеров */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5) sepia(1) saturate(5) hue-rotate(100deg);
+    cursor: pointer;
 }

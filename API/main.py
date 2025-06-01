@@ -27,6 +27,12 @@ def core():
         elif data["actionData"]["Page"] == "AddPlant":
             return render_template('add-plant.html', css_file='add-plant.css')
 
+        elif data["actionData"]["Page"] == "AddNote":
+            return render_template('add-note.html', css_file='add-note.css')
+
+        elif data["actionData"]["Page"] == "AddTask":
+            return render_template('add-task.html', css_file='add-task.css')
+
         elif data["actionData"]["Page"] == "Plant":
             return render_template('plant-card.html', css_file='plant-card.css')
 
@@ -50,6 +56,12 @@ def core():
 
         elif data["actionData"]["Page"] == "Calendar":
             return render_template('calendar.html', css_file='calendar.css')
+
+        elif data["actionData"]["Page"] == "FilterNotes":
+            return render_template('filter-notes.html', css_file='filter-notes.css')
+
+        elif data["actionData"]["Page"] == "FilterTasks":
+            return render_template('filter-tasks.html', css_file='filter-tasks.css')
 
     elif data["action"] == "Plant":
         if "plant_id" not in data["actionData"].keys():
@@ -102,6 +114,9 @@ def core():
     elif data["action"] == "GetPhotos":
         return get_photos()
 
+    elif data["action"] == "GetFilteredPhotos":
+        return get_filtered_photos(data["actionData"])
+
     elif data["action"] == "GetNotes":
         return get_notes()
 
@@ -123,6 +138,12 @@ def core():
     elif data["action"] == "AddPlant":
         return add_plant(data["actionData"])
 
+    elif data["action"] == "AddNote":
+        return add_note(data["actionData"])
+
+    elif data["action"] == "AddTask":
+        return add_task(data["actionData"])
+
     elif data["action"] == "UpdatePlant":
         return update_plant(data["actionData"])
 
@@ -138,9 +159,9 @@ def core():
 
     elif data["action"] == "UpdateNote":
         if "note_id" not in data["actionData"].keys() or "name" not in data["actionData"].keys() or "description" not in \
-                data["actionData"].keys():
+                data["actionData"].keys() or "plant_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return update_note(data["actionData"]["note_id"], data["actionData"]["name"], data["actionData"]["description"])
+        return update_note(data["actionData"]["note_id"], data["actionData"]["name"], data["actionData"]["description"], data["actionData"]["plant_id"])
 
     elif data["action"] == "AddPhoto":
         return add_photo(data["actionData"])
@@ -148,8 +169,14 @@ def core():
     elif data["action"] == "AddPhotoWithoutPlant":
         return add_photo_without_plant(data["actionData"])
 
-    elif data["action"] == "AddNote":
-        return add_note(data["actionData"])
+    elif data["action"] == "DeletePhoto":
+        return delete_photo(data["actionData"])
+
+    elif data["action"] == "DeleteNote":
+        return delete_note(data["actionData"])
+
+    elif data["action"] == "DeleteTask":
+        return delete_task(data["actionData"])
 
 
 def get_plants():
@@ -163,6 +190,27 @@ def get_filtered_plants(data):
     plants = Plant.query.filter(Plant.name.ilike(f'%{name}%') | Plant.science_name.ilike(f'%{name}%')).all()
     return jsonify([{"plant_id": p.plant_id, "name": p.name, "science_name": p.science_name, "date_added": p.date_added,
                      "place": p.place, "main_photo": get_plant_main_photo(p.plant_id)} for p in plants])
+
+
+def get_filtered_photos(data):
+    plant_id = data["plant_id"]
+    photos = Photo.query.filter_by(plant_id=plant_id).all()
+    result = []
+    for p in photos:
+        directory = os.path.join(current_app.root_path, 'static', 'userphotos')
+        with open(directory + "\\" + p.filename, "rb") as image_file:
+            # 2. Читаем бинарные данные
+            image_data = image_file.read()
+
+            # 3. Кодируем в Base64 и декодируем в строку (utf-8)
+            image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+            result.append({
+                "photo_id": p.photo_id,
+                "plant_id": p.plant_id,
+                "image": image_base64
+            })
+    return jsonify(result), 200
 
 
 def get_plant(plant_id):
@@ -234,7 +282,39 @@ def get_notes():
                 photo = base64.b64encode(image_data).decode("utf-8")
         result.append({
             "note_id": n.note_id,
-            "note_type_id": n.note_type_id,
+            "plant_id": n.plant_id,
+            "image": photo,
+            "note_name": n.note_name,
+            "description": n.description,
+            "date": n.date_added
+        })
+
+    return jsonify(result)
+
+
+def get_filtered_notes(data):
+    date_to = data["date_to"]
+    date_from = data["date_from"]
+    plant_id = data["plant_id"]
+    notes = Note.query.filter_by()
+    result = []
+    for n in notes:
+        if n.photo_id:
+            response = get_photo(n.photo_id)
+            if response[1] != 200:
+                photo = None
+            else:
+                response_dict = get_photo(n.photo_id)[0].get_json()
+                photo = response_dict["image"]
+        else:
+            with open("static/photos/default-note.png", "rb") as image_file:
+                # 2. Читаем бинарные данные
+                image_data = image_file.read()
+
+                # 3. Кодируем в Base64 и декодируем в строку (utf-8)
+                photo = base64.b64encode(image_data).decode("utf-8")
+        result.append({
+            "note_id": n.note_id,
             "image": photo,
             "note_name": n.note_name,
             "description": n.description,
@@ -342,7 +422,7 @@ def get_note(note_id):
             photo = base64.b64encode(image_data).decode("utf-8")
     return jsonify({
         "note_id": n.note_id,
-        "note_type_id": n.note_type_id,
+        "plant_id": n.plant_id,
         "image": photo,
         "name": n.note_name,
         "description": n.description,
@@ -368,6 +448,60 @@ def add_plant(data):
     return jsonify({"status": "success"}), 200
 
 
+def add_note(data):
+    if "name" not in data.keys() or "description" not in data.keys() or "plant_id" not in data.keys() or "date" not in data.keys() or "image" not in data.keys():
+        return jsonify({"error": "Some attributes doesnt exist"}), 400
+
+    if Note.query.filter(Note.note_name == data["name"]).first():
+        return jsonify({"status": "conflict"}), 409
+
+    photo_id = None
+
+    if data["date"]:
+        note_date = data["date"]
+    else:
+        note_date = datetime.datetime.today()
+
+    if data["image"]:
+        image = data["image"]
+
+        filename = str(Plant.query.filter_by(plant_id=data["plant_id"]).first().name) + str(random.randrange(1, 10000)) + ".jpg"  # Добавить username
+        file_data = base64.b64decode(image)
+        with open(app.config["UPLOAD_FOLDER"] + filename, "wb") as f:
+            f.write(file_data)
+        new_photo = Photo(plant_id=data["plant_id"], filename=filename)
+        db.session.add(new_photo)
+        db.session.commit()
+        print("photo_id", new_photo.photo_id)
+        photo_id = new_photo.photo_id
+
+    new_note = Note(note_name=data["name"], description=data["description"], date_added=note_date, photo_id=photo_id, plant_id=data["plant_id"])
+    db.session.add(new_note)
+    db.session.commit()
+
+    return jsonify({"status": "success"}), 200
+
+
+def add_task(data):
+    if "name" not in data.keys() or "description" not in data.keys() or "plant_id" not in data.keys() or "task_type_id" not in data.keys() or "frequency_id" not in data.keys():
+        return jsonify({"status": "Bad Request"}), 400
+
+    t = Task.query.filter_by(task_name=data["name"]).first()
+    if t:
+        return jsonify({"status": "Conflict"}), 409
+
+    if data["date"]:
+        task_date = data["date"]
+    else:
+        task_date = datetime.datetime.today()
+
+    task = Task(task_name=data["name"], task_description=data["description"], plant_id=data["plant_id"], task_type_id=data["task_type_id"], repeat_type_id=data["frequency_id"], task_date=task_date)
+    db.session.add(task)
+    db.session.commit()
+
+    return jsonify({"status": "success"}), 200
+
+
 def update_plant(data):
     if "plant_id" not in data.keys() or "plant_name" not in data.keys() or "plant_science_name" not in data.keys() or "plant_place" not in data.keys():
         return jsonify({"error": "Some attributes don't exist"}), 400
@@ -387,13 +521,14 @@ def update_plant(data):
     return jsonify({"result": "Success"}), 200
 
 
-def update_note(note_id, name, description):
+def update_note(note_id, name, description, plant_id):
     note = Note.query.filter_by(note_id=note_id).first()
     if not note:
         return jsonify({"status": "Note not found"}), 404
 
     note.note_name = name
     note.description = description
+    note.plant_id = plant_id
 
     db.session.commit()
     return jsonify({"status": "success"}), 200
@@ -525,17 +660,6 @@ def is_main_photo(plant_id, photo_id):
         return jsonify({"status": "success", "isMainPhoto": False})
 
 
-def add_note(data):
-    if "plant_id" not in data.keys() or "note_type_id" not in data.keys() or "note" not in data.keys() \
-            or "photo_id" not in data.keys():
-        return jsonify({"error": "Some attributes doesn't exist"}), 400
-
-    new_note = Note(plant_id=data["plant_id"], note_type_id=data["note_type_id"], note=data["note"],
-                    photo_id=data["photo_id"])
-    db.session.add(new_note)
-    db.session.commit()
-
-
 def get_task_types():
     task_types = TaskType.query.all()
     result = []
@@ -556,6 +680,54 @@ def get_repeat_types():
             "repeat_type_description": t.description
         })
     return jsonify(result), 200
+
+
+def delete_photo(data):
+    if "photo_id" not in data.keys():
+        return jsonify({"status": "Bad Request"}), 404
+
+    note = Note.query.filter_by(photo_id=data["photo_id"]).first()
+    if note:
+        note.photo_id = None
+
+    main_photo = MainPhoto.query.filter_by(photo_id=data["photo_id"]).first()
+    if main_photo:
+        db.session.delete(main_photo)
+
+    photo = Photo.query.filter_by(photo_id=data["photo_id"]).first()
+    if photo:
+        path = photo.filename
+        os.remove(IMAGE_FOLDER + path)
+        db.session.delete(photo)
+
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
+
+
+def delete_note(data):
+    if "note_id" not in data.keys():
+        return jsonify({"status": "Bad Request"}), 400
+
+    note = Note.query.filter_by(note_id=data["note_id"]).first()
+    photo = Photo.query.filter_by(photo_id=note.photo_id).first()
+    if photo:
+        delete_photo({"photo_id": photo.photo_id})
+
+    db.session.delete(note)
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
+
+
+def delete_task(data):
+    if "task_id" not in data.keys():
+        return jsonify({"status": "Bad Request"}), 400
+
+    task = Task.query.filter_by(task_id=data["task_id"]).first()
+    Calendar.query.filter_by(task_id=task.task_id).delete()
+
+    db.session.delete(task)
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
 
 
 app.run()

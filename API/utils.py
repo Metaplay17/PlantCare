@@ -79,7 +79,7 @@ def update_task_calendar(task):
     # Генерация новых задач
     tasks = []
     start = datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-    end = start + datetime.timedelta(days=30)
+    end = start + datetime.timedelta(days=365)
     while start <= end:
         tasks.append(Calendar(task_id=task.task_id, entry_date=start))
         start += time_delta
