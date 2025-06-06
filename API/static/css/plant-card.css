@@ -56,6 +56,21 @@
     background-color: #388e3c;
 }
 
+.del-btn {
+    background-color: #fb1521;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.del-btn:hover {
+    background-color: #af0012;
+}
+
 .plant-form {
     width: 100%;
     display: flex;

@@ -1,33 +1,36 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/add-task.css') }}">
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
 <form id="add-task-form">
     <div class="form-columns">
         <div class="form-column">
-            <label>Task Name</label>
+            <label>Название задачи</label>
             <input type="text" id="task-name-input" placeholder="Enter task name" required>
             
-            <label>Plant</label>
+            <label>Растение</label>
             <select id="plant-select" required>
                 <option value="" disabled selected>Select a plant</option>
             </select>
             
-            <label>Date</label>
+            <label>Дата</label>
             <input type="date" id="task-date-input">
         </div>
         
         <div class="form-column">
-            <label>Task Type</label>
+            <label>Тип задачи</label>
             <select id="task-type-select" required>
                 <option value="" disabled selected>Select task type</option>
             </select>
             
-            <label>Frequency</label>
+            <label>Частота</label>
             <select id="frequency-select" required>
                 <option value="" disabled selected>Select frequency</option>
             </select>
         </div>
     </div>
     
-    <label>Description</label>
+    <label>Описание</label>
     <textarea id="task-description-input" placeholder="Describe the task..." rows="4"></textarea>
     
     <button id="add-task-submit-btn">Add Task</button>

@@ -1,0 +1,16 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add-photo.css') }}">
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
+<form id="add-photo-form">
+    <label>Растение</label>
+    <select id="plant-select" required>
+        <option value="" disabled selected>Выберите растение</option>
+        <!-- Опции будут заполняться динамически -->
+    </select>
+    
+    <label>Фотография</label>
+    <input type="file" id="photo-input" accept="image/jpeg, image/png, image/jpg" required>
+    
+    <button id="add-photo-submit-btn">Добавить фото</button>
+</form>

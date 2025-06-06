@@ -1,11 +1,13 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/photos.css') }}">
 <div class="controls">
-    <button class="add-btn" id="upload-btn">Add</button>
-    <input type="file" id="file-input" accept="image/*" style="display: none;">
+    <a href="#AddPhoto"><button class="add-btn" id="upload-btn">Добавить</button></a>
     <select class="plant-select" id="plant-select">
-        <option value="" disabled selected>Select plant</option>
+        <option value="" disabled selected>Выберите растение</option>
     </select>
 </div>
-<div class="photos-container">
-    
+<!-- Элемент с колесом загрузки -->
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
+<div class="photos-container" id="photos-container">
 </div>

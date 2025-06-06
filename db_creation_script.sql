@@ -1,118 +1,80 @@
-CREATE SEQUENCE IF NOT EXISTS plant_id_seq 
-AS INT
-INCREMENT BY 1
-MINVALUE 1
-NO MAXVALUE
-START WITH 1;
+-- Пользователи
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(20) UNIQUE NOT NULL,
+    login VARCHAR(20) UNIQUE NOT NULL,
+    email VARCHAR(30) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL
+);
 
-CREATE SEQUENCE IF NOT EXISTS task_id_seq 
-AS INT
-INCREMENT BY 1
-MINVALUE 1
-NO MAXVALUE
-START WITH 1;
+-- Типы задач
+CREATE TABLE task_types (
+    task_type_id SERIAL PRIMARY KEY,
+    description TEXT
+);
 
-CREATE SEQUENCE IF NOT EXISTS note_id_seq 
-AS INT
-INCREMENT BY 1
-MINVALUE 1
-NO MAXVALUE
-START WITH 1;
+-- Типы повторений
+CREATE TABLE repeat_types (
+    repeat_type_id SERIAL PRIMARY KEY,
+    description VARCHAR(20)
+);
 
-CREATE SEQUENCE IF NOT EXISTS photo_id_seq 
-AS INT
-INCREMENT BY 1
-MINVALUE 1
-NO MAXVALUE
-START WITH 1;
-
-CREATE SEQUENCE IF NOT EXISTS task_detail_id_seq 
-AS INT
-INCREMENT BY 1
-MINVALUE 1
-NO MAXVALUE
-START WITH 1;
-
-CREATE SEQUENCE IF NOT EXISTS note_type_id_seq 
-AS INT
-INCREMENT BY 1
-MINVALUE 1
-NO MAXVALUE
-START WITH 1;
-
-CREATE SEQUENCE IF NOT EXISTS task_type_id_seq 
-AS INT
-INCREMENT BY 1
-MINVALUE 1
-NO MAXVALUE
-START WITH 1;
-
-CREATE SEQUENCE IF NOT EXISTS repeat_type_id_seq 
-AS INT
-INCREMENT BY 1
-MINVALUE 1
-NO MAXVALUE
-START WITH 1;
-
-
-
-CREATE TABLE IF NOT EXISTS plants (
-    plant_id INT PRIMARY KEY DEFAULT nextval('plant_id_seq'),
+-- Растения
+CREATE TABLE plants (
+    plant_id SERIAL PRIMARY KEY,
     name VARCHAR(30),
     science_name VARCHAR(50),
-    date_added DATE,
-    place NUMERIC(5)
+    date_added DATE DEFAULT CURRENT_DATE,
+    place NUMERIC(5,1),
+    user_id INTEGER NOT NULL REFERENCES users(user_id)
 );
 
-CREATE TABLE IF NOT EXISTS task_types (
-    task_type_id INT PRIMARY KEY DEFAULT nextval('task_type_id_seq'),
-    description TEXT
-);
-
-CREATE TABLE IF NOT EXISTS photos (
-    photo_id INT PRIMARY KEY DEFAULT nextval('photo_id_seq'),
-    plant_id INT,
+-- Фотографии
+CREATE TABLE photos (
+    photo_id SERIAL PRIMARY KEY,
+    plant_id INTEGER REFERENCES plants(plant_id),
     filename VARCHAR(50),
-    FOREIGN KEY (plant_id) REFERENCES plants(plant_id)
+    user_id INTEGER NOT NULL REFERENCES users(user_id)
 );
 
-CREATE TABLE IF NOT EXISTS main_photos (
-    plant_id INT PRIMARY KEY,
-    photo_id INT,
-    FOREIGN KEY (plant_id) REFERENCES plants(plant_id),
-    FOREIGN KEY (photo_id) REFERENCES photos(photo_id)
+-- Основные фотографии (один к одному: растение ↔ фото)
+CREATE TABLE main_photos (
+    plant_id INTEGER PRIMARY KEY REFERENCES plants(plant_id),
+    photo_id INTEGER UNIQUE REFERENCES photos(photo_id)
 );
 
-CREATE TABLE IF NOT EXISTS note_types (
-    note_type_id INT PRIMARY KEY DEFAULT nextval('note_type_id_seq'),
-    description TEXT
-);
-
-CREATE TABLE IF NOT EXISTS repeat_types (
-    repeat_type_id INT PRIMARY KEY DEFAULT nextval('repeat_type_id_seq'),
-    type TEXT
-)
-
-CREATE TABLE IF NOT EXISTS tasks (
-    task_id INT PRIMARY KEY DEFAULT nextval('task_id_seq'),
-    plant_id INT,
-    task_type_id INT,
+-- Задачи
+CREATE TABLE tasks (
+    task_id SERIAL PRIMARY KEY,
+    task_name VARCHAR(50),
+    task_description TEXT,
+    plant_id INTEGER REFERENCES plants(plant_id),
+    task_type_id INTEGER REFERENCES task_types(task_type_id),
     task_date DATE,
-    repeat_type_id INT,
-    FOREIGN KEY (plant_id) REFERENCES plants(plant_id),
-    FOREIGN KEY (task_type_id) REFERENCES task_types(task_type_id)
-    FOREIGN KEY (repeat_type_id) REFERENCES repeat_types(repeat_type_id)
+    repeat_type_id INTEGER REFERENCES repeat_types(repeat_type_id),
+    user_id INTEGER NOT NULL REFERENCES users(user_id)
 );
 
-CREATE TABLE IF NOT EXISTS notes (
-    note_id INT PRIMARY KEY DEFAULT nextval('note_id_seq'),
-    plant_id INT,
-    note_type_id INT,
+-- Заметки
+CREATE TABLE notes (
+    note_id SERIAL PRIMARY KEY,
+    plant_id INTEGER REFERENCES plants(plant_id),
     note_name VARCHAR(70),
     description TEXT,
-    photo_id INT,
-    date_added DATE,
-    FOREIGN KEY (plant_id) REFERENCES plants(plant_id),
-    FOREIGN KEY (note_type_id) REFERENCES note_types(note_type_id),
-    FOREIGN KEY (photo_id) REFERENCES photos(photo_id)
+    photo_id INTEGER REFERENCES photos(photo_id),
+    date_added DATE DEFAULT CURRENT_DATE,
+    user_id INTEGER NOT NULL REFERENCES users(user_id)
 );
+
+-- Календарь
+CREATE TABLE calendar (
+    entry_id SERIAL PRIMARY KEY,
+    entry_date DATE,
+    task_id INTEGER REFERENCES tasks(task_id),
+    user_id INTEGER NOT NULL REFERENCES users(user_id)
+);
+
+-- Фильтрация по пользователю
+CREATE INDEX idx_plants_user_id ON plants(user_id);
+CREATE INDEX idx_tasks_user_id ON tasks(user_id);
+CREATE INDEX idx_notes_user_id ON notes(user_id);

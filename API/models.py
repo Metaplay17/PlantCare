@@ -1,14 +1,17 @@
-from flask import Flask, request, jsonify
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import extract
 from datetime import date
 from flask_cors import CORS
+from flask_migrate import Migrate
 
 app = Flask("app")
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:qazedcrfvs1A@localhost/PlantCare'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-CORS(app)
+CORS(app,
+     origins=[r"http://localhost:\d+"],
+     supports_credentials=True)
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 
 class TaskType(db.Model):
@@ -29,6 +32,20 @@ class RepeatType(db.Model):
         return f"<RepeatType(repeat_type_id={self.repeat_type_id})>"
 
 
+class User(db.Model):
+    __tablename__ = "users"
+    user_id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(20))
+    login = db.Column(db.String(20))
+    email = db.Column(db.String(30))
+    password_hash = db.Column(db.Text)
+    code = db.Column(db.Numeric(precision=6, scale=0), default=0)
+    isActivated = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f"<User(username={self.username})>"
+
+
 class Plant(db.Model):
     __tablename__ = "plants"
     plant_id = db.Column(db.Integer, primary_key=True)
@@ -36,6 +53,7 @@ class Plant(db.Model):
     science_name = db.Column(db.String(50))
     date_added = db.Column(db.Date, default=date.today)
     place = db.Column(db.Numeric(precision=5, scale=1))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
     photos = db.relationship('Photo', backref='plant', lazy=True)
     tasks = db.relationship('Task', backref='plant', lazy=True)
     notes = db.relationship('Note', backref='plant', lazy=True)
@@ -48,7 +66,7 @@ class Photo(db.Model):
     __tablename__ = "photos"
     photo_id = db.Column(db.Integer, primary_key=True)
     plant_id = db.Column(db.Integer, db.ForeignKey('plants.plant_id'))
-    filename = db.Column(db.String(50))
+    filename = db.Column(db.String(80))
     notes = db.relationship('Note', backref='photo', lazy=True)
 
     def __repr__(self):

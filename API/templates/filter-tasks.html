@@ -1,18 +1,21 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/filter-tasks.css') }}">
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
 <form id="filter-task-form">  
-    <label>Plant</label>
+    <label>Растение</label>
     <select id="plant-select">
-        <option value="" disabled selected>Select a plant</option>
+        <option value="" disabled selected>Выберите растение</option>
     </select>
     
-    <label>Task Type</label>
+    <label>Тип задачи</label>
     <select id="task-type-select">
-        <option value="" disabled selected>Select task type</option>
+        <option value="" disabled selected>Выберите тип задачи</option>
     </select>
 
-    <label>Task Frequency</label>
+    <label>Частота задачи</label>
     <select id="frequency-select">
-        <option value="" disabled selected>Select frequency</option>
+        <option value="" disabled selected>Выберите частоту</option>
     </select>
     
     <button id="filter-tasks-btn">Filter</button>

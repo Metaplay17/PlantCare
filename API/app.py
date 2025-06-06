@@ -1,24 +1,205 @@
+import calendar
 import datetime
 import json
 import random
+import uuid
+
+import bcrypt
+import os
+from dotenv import load_dotenv
 
 from models import *
-from flask import current_app, render_template
+import sendmail
+from flask import current_app, render_template, jsonify, request, redirect, url_for, make_response
+from sqlalchemy import extract
 import os
 import base64
 from constants import *
 from utils import *
 
+from flask_jwt_extended import (
+    JWTManager, create_access_token,
+    create_refresh_token, set_refresh_cookies, set_access_cookies,
+    jwt_required, get_jwt_identity, get_jwt,
+    unset_jwt_cookies, verify_jwt_in_request
+)
+
+load_dotenv()
+
+jwt_secret_key = os.getenv("JWT_SECRET_KEY")
+
 app.config['UPLOAD_FOLDER'] = IMAGE_FOLDER
+
+app.config['JWT_SECRET_KEY'] = jwt_secret_key
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
+app.config['JWT_REFRESH_COOKIE_PATH'] = '/'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 900  # 15 минут
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = 86400 * 7  # 7 дней
+app.config["JWT_COOKIE_SECURE"] = True
+app.config["JWT_COOKIE_SAMESITE"] = "None"  # работает только через HTTPS
+app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+jwt = JWTManager(app)
+
+
+@app.before_request
+def refresh_token_middleware():
+    if request.endpoint in EXCLUDED_ENDPOINTS:
+        return  # Пропускаем middleware
+    try:
+        verify_jwt_in_request()
+        return
+    except Exception:
+        # return refresh()
+        pass
+    try:
+        # Вызываем /auth/refresh напрямую
+        @jwt_required(refresh=True)
+        def call_refresh():
+            current_user = get_jwt_identity()
+            new_access_token = create_access_token(identity=current_user)
+
+            response = make_response(jsonify({"status": "Token has been refreshed"}))
+            set_access_cookies(response, new_access_token)
+            return response
+
+        refresh_response = call_refresh()
+
+        # Получаем оригинальный путь
+        original_path = request.path
+        original_query = request.query_string.decode()
+
+        # Формируем URL для редиректа
+        redirect_url = original_path
+        if original_query:
+            redirect_url += '?' + original_query
+
+        # Объединяем Set-Cookie из refresh и редирект
+        redirect_response = redirect(redirect_url)
+        for header, value in refresh_response.headers:
+            redirect_response.headers[header] = value
+
+        return redirect_response
+
+    except Exception as e:
+        return redirect(url_for('log_in_page'))
+
+
+@app.route('/login', methods=['GET'])
+def log_in_page():
+    try:
+        verify_jwt_in_request()
+    except Exception:
+        return render_template('sign-in.html', css_file='sign-in.css')
+    return redirect(url_for('start_page'))
+
+
+@app.route('/sign-up', methods=['GET'])
+def sign_up_page():
+    try:
+        verify_jwt_in_request()
+    except Exception:
+        return render_template('sign-up.html', css_file='sign-up.css')
+    return redirect(url_for('start_page'))
+
+
+@app.route('/register', methods=['POST'])
+def register():
+    try:
+        verify_jwt_in_request()
+    except Exception:
+        data = request.json
+        if not username_regex.match(data["username"]) or not password_regex.match(
+                data["password"]) or not email_regex.match(data["email"]) or not username_regex.match(data["login"]) or \
+                data["password"] != data["confirm_password"]:
+            return jsonify({"status": "Incorrect data"}), 400
+
+        if is_login_exist(data["login"]):
+            return jsonify({"status": "Login is already used"}), 409
+
+        if is_email_exist(data["email"]):
+            return jsonify({"status": "Email is already used"}), 409
+
+        salt = bcrypt.gensalt()
+        code = random.randint(100000, 999999)
+        user = User(username=data["username"], login=data["login"],
+                    password_hash=bcrypt.hashpw(data["password"].encode(), salt).decode('utf-8'), email=data["email"], code=code)
+        if sendmail.send_activation_email(user.email, code):
+            db.session.add(user)
+            db.session.commit()
+            return jsonify({"status": "success"}), 200
+        return jsonify({"status": "Server Error"}), 500
+
+    return redirect(url_for('start_page'))
+
+
+@app.route('/confirm_email', methods=['GET'])
+def confirm_email():
+    email = request.args.get('email')
+    code = request.args.get('code')
+    user = User.query.filter_by(email=email).first()
+    if user.code != code:
+        return jsonify({"status": "Код неверный"}), 200
+    if user:
+        user.code = 0
+        user.isActivated = True
+        db.session.commit()
+    return redirect(url_for('log_in_page'))
+
+
+@app.route('/auth/login', methods=['POST'])
+def log_in():
+    try:
+        verify_jwt_in_request()
+    except Exception:
+        data = request.json
+        login = data["login"]
+        password_bytes = data["password"].encode()
+        user = User.query.filter_by(login=login).first()
+        password_hash = user.password_hash.encode()
+
+        if not user or not bcrypt.checkpw(password_bytes, password_hash):
+            return jsonify({"Wrong login/password"}), 403
+
+        access_token = create_access_token(identity=login)
+        refresh_token = create_refresh_token(identity=login)
+
+        response = jsonify({"status": "success"})
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
+        return response
+
+    return redirect(url_for('start_page'))
+
+
+@app.route('/auth/refresh', methods=['POST', 'GET'])
+@jwt_required(refresh=True)
+def refresh():
+    current_user = get_jwt_identity()
+    new_access_token = create_access_token(identity=current_user)
+    response = make_response(jsonify({"status": "Token has been refreshed"}))
+    set_access_cookies(response, new_access_token)
+    return response
+
+
+@app.route('/auth/logout', methods=['POST'])
+def log_out():
+    response = jsonify({"msg": "Logout successful"})
+    unset_jwt_cookies(response)
+    return response
 
 
 @app.route('/', methods=['GET'])
+@jwt_required()
 def start_page():
     return render_template('Home.html')
 
 
-@app.route('/', methods=['POST'])
+@app.route('/api', methods=['POST'])
+@jwt_required()
 def core():
+    login = get_jwt_identity()
+    user_id = get_user_id_by_login(login)
     data = request.json
     if data["action"] == "GetPage":
         if data["actionData"]["Page"] == "Plants":
@@ -26,6 +207,9 @@ def core():
 
         elif data["actionData"]["Page"] == "AddPlant":
             return render_template('add-plant.html', css_file='add-plant.css')
+
+        elif data["actionData"]["Page"] == "AddPhoto":
+            return render_template('add-photo.html', css_file='add-photo.css')
 
         elif data["actionData"]["Page"] == "AddNote":
             return render_template('add-note.html', css_file='add-note.css')
@@ -66,62 +250,59 @@ def core():
     elif data["action"] == "Plant":
         if "plant_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return get_plant(data["actionData"]["plant_id"])
+        return get_plant(data["actionData"]["plant_id"], user_id)
 
     elif data["action"] == "Photo":
         if "photo_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return get_photo(data["actionData"]["photo_id"])
+        return get_photo(data["actionData"]["photo_id"], user_id)
 
     elif data["action"] == "Note":
         if "note_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return get_note(data["actionData"]["note_id"])
+        return get_note(data["actionData"]["note_id"], user_id)
 
     elif data["action"] == "Task":
         if "task_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return get_task(data["actionData"]["task_id"])
+        return get_task(data["actionData"]["task_id"], user_id)
 
     elif data["action"] == "PlantIdByPhoto":
         if "photo_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return get_plant_id_by_photo(data["actionData"]["photo_id"])
+        return get_plant_id_by_photo(data["actionData"]["photo_id"], user_id)
 
     elif data["action"] == "ChangeMainPhoto":
         if "photo_id" not in data["actionData"].keys() or "plant_id" not in data[
             "actionData"].keys() or "selected" not in data["actionData"]:
             return jsonify({"status": "Bad Request"}), 400
         return change_main_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"],
-                                 data["actionData"]["selected"])
+                                 data["actionData"]["selected"], user_id)
 
     elif data["action"] == "ChangePlantPhoto":
         if "photo_id" not in data["actionData"].keys() or "plant_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return change_plant_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"])
+        return change_plant_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"], user_id)
 
     elif data["action"] == "IsMainPhoto":
         if "photo_id" not in data["actionData"].keys() or "plant_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return is_main_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"])
+        return is_main_photo(data["actionData"]["plant_id"], data["actionData"]["photo_id"], user_id)
+
+    elif data["action"] == "GetUsername":
+        return get_username(user_id)
 
     elif data["action"] == "GetPlants":
-        return get_plants()
-
-    elif data["action"] == "GetFilteredPlants":
-        return get_filtered_plants(data["actionData"])
+        return get_plants(user_id)
 
     elif data["action"] == "GetPhotos":
-        return get_photos()
-
-    elif data["action"] == "GetFilteredPhotos":
-        return get_filtered_photos(data["actionData"])
+        return get_photos(user_id)
 
     elif data["action"] == "GetNotes":
-        return get_notes()
+        return get_notes(user_id)
 
     elif data["action"] == "GetTasks":
-        return get_tasks()
+        return get_tasks(user_id)
 
     elif data["action"] == "GetTaskTypes":
         return get_task_types()
@@ -130,22 +311,22 @@ def core():
         return get_repeat_types()
 
     elif data["action"] == "GetDateTasks":
-        return get_date_tasks(str(data["actionData"]["date"]))
+        return get_date_tasks(str(data["actionData"]["date"]), user_id)
 
     elif data["action"] == "GetMonthTasks":
-        return get_month_tasks(str(data["actionData"]["date"]))
+        return get_month_tasks(str(data["actionData"]["date"]), user_id)
 
     elif data["action"] == "AddPlant":
-        return add_plant(data["actionData"])
+        return add_plant(data["actionData"], user_id)
 
     elif data["action"] == "AddNote":
-        return add_note(data["actionData"])
+        return add_note(data["actionData"], user_id)
 
     elif data["action"] == "AddTask":
-        return add_task(data["actionData"])
+        return add_task(data["actionData"], user_id)
 
     elif data["action"] == "UpdatePlant":
-        return update_plant(data["actionData"])
+        return update_plant(data["actionData"], user_id)
 
     elif data["action"] == "UpdateTask":
         if "task_id" not in data["actionData"].keys() or "task_id" not in data[
@@ -155,66 +336,39 @@ def core():
             return jsonify({"status": "Bad Request"}), 400
         return update_task(data["actionData"]["task_id"], data["actionData"]["task_name"],
                            data["actionData"]["task_description"], data["actionData"]["task_date"],
-                           data["actionData"]["task_type_id"], data["actionData"]["repeat_type_id"], )
+                           data["actionData"]["task_type_id"], data["actionData"]["repeat_type_id"], user_id)
 
     elif data["action"] == "UpdateNote":
         if "note_id" not in data["actionData"].keys() or "name" not in data["actionData"].keys() or "description" not in \
                 data["actionData"].keys() or "plant_id" not in data["actionData"].keys():
             return jsonify({"status": "Bad Request"}), 400
-        return update_note(data["actionData"]["note_id"], data["actionData"]["name"], data["actionData"]["description"], data["actionData"]["plant_id"])
+        return update_note(data["actionData"]["note_id"], data["actionData"]["name"], data["actionData"]["description"],
+                           data["actionData"]["plant_id"], user_id)
 
     elif data["action"] == "AddPhoto":
-        return add_photo(data["actionData"])
-
-    elif data["action"] == "AddPhotoWithoutPlant":
-        return add_photo_without_plant(data["actionData"])
+        return add_photo(data["actionData"], user_id)
 
     elif data["action"] == "DeletePhoto":
-        return delete_photo(data["actionData"])
+        return delete_photo(data["actionData"], user_id)
 
     elif data["action"] == "DeleteNote":
-        return delete_note(data["actionData"])
+        return delete_note(data["actionData"], user_id)
 
     elif data["action"] == "DeleteTask":
-        return delete_task(data["actionData"])
+        return delete_task(data["actionData"], user_id)
+
+    elif data["action"] == "DeletePlant":
+        return delete_plant(data["actionData"], user_id)
 
 
-def get_plants():
-    plants = Plant.query.all()
+def get_plants(user_id):
+    plants = Plant.query.filter_by(user_id=user_id).all()
     return jsonify([{"plant_id": p.plant_id, "name": p.name, "science_name": p.science_name, "date_added": p.date_added,
                      "place": p.place, "main_photo": get_plant_main_photo(p.plant_id)} for p in plants])
 
 
-def get_filtered_plants(data):
-    name = data["name"]
-    plants = Plant.query.filter(Plant.name.ilike(f'%{name}%') | Plant.science_name.ilike(f'%{name}%')).all()
-    return jsonify([{"plant_id": p.plant_id, "name": p.name, "science_name": p.science_name, "date_added": p.date_added,
-                     "place": p.place, "main_photo": get_plant_main_photo(p.plant_id)} for p in plants])
-
-
-def get_filtered_photos(data):
-    plant_id = data["plant_id"]
-    photos = Photo.query.filter_by(plant_id=plant_id).all()
-    result = []
-    for p in photos:
-        directory = os.path.join(current_app.root_path, 'static', 'userphotos')
-        with open(directory + "\\" + p.filename, "rb") as image_file:
-            # 2. Читаем бинарные данные
-            image_data = image_file.read()
-
-            # 3. Кодируем в Base64 и декодируем в строку (utf-8)
-            image_base64 = base64.b64encode(image_data).decode("utf-8")
-
-            result.append({
-                "photo_id": p.photo_id,
-                "plant_id": p.plant_id,
-                "image": image_base64
-            })
-    return jsonify(result), 200
-
-
-def get_plant(plant_id):
-    plant = Plant.query.filter(Plant.plant_id == plant_id).first()
+def get_plant(plant_id, user_id):
+    plant = Plant.query.filter((Plant.plant_id == plant_id) & (Plant.user_id == user_id)).first()
     if not plant:
         return jsonify({"status": "Not Found"}), 404
     return jsonify({
@@ -226,8 +380,8 @@ def get_plant(plant_id):
     })
 
 
-def get_task(task_id):
-    t = Task.query.filter_by(task_id=task_id).first()
+def get_task(task_id, user_id):
+    t = Task.query.join(Plant, Task.plant_id == Plant.plant_id).filter((Task.task_id == task_id) & (Plant.user_id == user_id)).first()
     if not t:
         return jsonify({"status": "Task Not Found"}), 404
     return jsonify({
@@ -241,8 +395,8 @@ def get_task(task_id):
     })
 
 
-def get_photos():
-    photos = Photo.query.all()
+def get_photos(user_id):
+    photos = Photo.query.join(Plant, Plant.plant_id == Photo.plant_id).filter(Plant.user_id == user_id).all()
     result = []
     for p in photos:
         directory = os.path.join(current_app.root_path, 'static', 'userphotos')
@@ -262,16 +416,16 @@ def get_photos():
     return jsonify(result)
 
 
-def get_notes():
-    notes = Note.query.all()
+def get_notes(user_id):
+    notes = Note.query.join(Plant, Note.plant_id == Plant.plant_id).filter(Plant.user_id == user_id).all()
     result = []
     for n in notes:
         if n.photo_id:
-            response = get_photo(n.photo_id)
+            response = get_photo(n.photo_id, user_id)
             if response[1] != 200:
                 photo = None
             else:
-                response_dict = get_photo(n.photo_id)[0].get_json()
+                response_dict = get_photo(n.photo_id, user_id)[0].get_json()
                 photo = response_dict["image"]
         else:
             with open("static/photos/default-note.png", "rb") as image_file:
@@ -292,40 +446,8 @@ def get_notes():
     return jsonify(result)
 
 
-def get_filtered_notes(data):
-    date_to = data["date_to"]
-    date_from = data["date_from"]
-    plant_id = data["plant_id"]
-    notes = Note.query.filter_by()
-    result = []
-    for n in notes:
-        if n.photo_id:
-            response = get_photo(n.photo_id)
-            if response[1] != 200:
-                photo = None
-            else:
-                response_dict = get_photo(n.photo_id)[0].get_json()
-                photo = response_dict["image"]
-        else:
-            with open("static/photos/default-note.png", "rb") as image_file:
-                # 2. Читаем бинарные данные
-                image_data = image_file.read()
-
-                # 3. Кодируем в Base64 и декодируем в строку (utf-8)
-                photo = base64.b64encode(image_data).decode("utf-8")
-        result.append({
-            "note_id": n.note_id,
-            "image": photo,
-            "note_name": n.note_name,
-            "description": n.description,
-            "date": n.date_added
-        })
-
-    return jsonify(result)
-
-
-def get_tasks():
-    tasks = Task.query.all()
+def get_tasks(user_id):
+    tasks = Task.query.join(Plant, Task.plant_id == Plant.plant_id).filter(Plant.user_id == user_id).all()
     result = []
     for t in tasks:
         result.append({
@@ -340,18 +462,19 @@ def get_tasks():
     return jsonify(result), 200
 
 
-def get_date_tasks(date):
+def get_date_tasks(date, user_id):
     day = datetime.datetime.strptime(date, "%Y-%m-%d").date().day
     month = datetime.datetime.strptime(date, "%Y-%m-%d").date().month
     year = datetime.datetime.strptime(date, "%Y-%m-%d").date().year
-    entries = Calendar.query.filter(
+    entries = Calendar.query.join(Task, Task.task_id == Calendar.task_id).join(Plant, Task.plant_id == Plant.plant_id).filter(
         (extract('month', Calendar.entry_date) == month) &
         (extract('year', Calendar.entry_date) == year) &
-        (extract('day', Calendar.entry_date) == day)
+        (extract('day', Calendar.entry_date) == day) &
+        (Plant.user_id == user_id)
     ).all()
     tasks = []
     for entry in entries:
-        task = get_task(entry.task_id).get_json()
+        task = get_task(entry.task_id, user_id).get_json()
         calendar_task = {"task_id": task["task_id"],
                          "task_type": get_task_type_desc_by_type_id(task["task_type_id"]),
                          "task_name": task["task_name"]}
@@ -359,19 +482,20 @@ def get_date_tasks(date):
     return jsonify({"tasks": tasks}), 200
 
 
-def get_month_tasks(date):
+def get_month_tasks(date, user_id):
     parsed_date = datetime.datetime.fromisoformat(date.replace("Z", "+00:00"))
     month = parsed_date.month
     year = parsed_date.year
 
-    entries = Calendar.query.filter(
+    entries = Calendar.query.join(Task, Task.task_id == Calendar.task_id).join(Plant, Plant.plant_id == Task.plant_id).filter(
         (extract('month', Calendar.entry_date) == month) &
-        (extract('year', Calendar.entry_date) == year)
+        (extract('year', Calendar.entry_date) == year) &
+        (Plant.user_id == user_id)
     ).all()
 
     tasks = []
     for entry in entries:
-        task = get_task(entry.task_id).get_json()
+        task = get_task(entry.task_id, user_id).get_json()
 
         calendar_task = {
             "task_type": get_task_type_desc_by_type_id(task["task_type_id"]),
@@ -383,8 +507,8 @@ def get_month_tasks(date):
     return jsonify({"tasks": tasks}), 200
 
 
-def get_photo(photo_id):
-    photo = Photo.query.filter(Photo.photo_id == photo_id).first()
+def get_photo(photo_id, user_id):
+    photo = Photo.query.join(Plant, Plant.plant_id == Photo.plant_id).filter((Photo.photo_id == photo_id) & (Plant.user_id == user_id)).first()
     if not photo:
         return jsonify({"status": "Not Found"}), 404
     directory = os.path.join(current_app.root_path, 'static', 'userphotos')
@@ -401,17 +525,17 @@ def get_photo(photo_id):
         }), 200
 
 
-def get_note(note_id):
+def get_note(note_id, user_id):
     n = Note.query.filter_by(note_id=note_id).first()
     if not n:
         return jsonify({"status": "Note not found"}), 404
 
     if n.photo_id:
-        response = get_photo(n.photo_id)
+        response = get_photo(n.photo_id, user_id)
         if response[1] != 200:
             photo = None
         else:
-            response_dict = get_photo(n.photo_id)[0].get_json()
+            response_dict = get_photo(n.photo_id, user_id)[0].get_json()
             photo = response_dict["image"]
     else:
         with open("static/photos/default-note.png", "rb") as image_file:
@@ -430,29 +554,32 @@ def get_note(note_id):
     })
 
 
-def add_plant(data):
+def add_plant(data, user_id):
     if "name" not in data.keys() or "science_name" not in data.keys() or "place" not in data.keys():
         return jsonify({"error": "Some attributes doesnt exist"}), 400
 
-    if Plant.query.filter(Plant.name == data["name"] or Plant.place == data["place"]).first():
+    if Plant.query.filter(((Plant.name == data["name"]) | (Plant.place == data["place"])) & (Plant.user_id == user_id)).first():
         return jsonify({"status": "conflict"}), 409
 
-    new_plant = Plant(name=data["name"], science_name=data["science_name"], place=data["place"])
+    new_plant = Plant(name=data["name"], science_name=data["science_name"], place=data["place"], user_id=user_id)
     db.session.add(new_plant)
     db.session.commit()
 
     if data["main_photo"]:
         data["plant_id"] = new_plant.plant_id
-        add_main_photo(data)
+        add_main_photo(data, user_id)
 
     return jsonify({"status": "success"}), 200
 
 
-def add_note(data):
+def add_note(data, user_id):
+    if not Plant.query.filter((Plant.user_id == user_id) & (Plant.plant_id == data["plant_id"])).first():
+        return jsonify({"status": "Forbidden"}), 403
+
     if "name" not in data.keys() or "description" not in data.keys() or "plant_id" not in data.keys() or "date" not in data.keys() or "image" not in data.keys():
         return jsonify({"error": "Some attributes doesnt exist"}), 400
 
-    if Note.query.filter(Note.note_name == data["name"]).first():
+    if Note.query.join(Plant, Plant.plant_id == Note.plant_id).filter((Note.note_name == data["name"]) & (Plant.user_id == user_id)).first():
         return jsonify({"status": "conflict"}), 409
 
     photo_id = None
@@ -465,24 +592,27 @@ def add_note(data):
     if data["image"]:
         image = data["image"]
 
-        filename = str(Plant.query.filter_by(plant_id=data["plant_id"]).first().name) + str(random.randrange(1, 10000)) + ".jpg"  # Добавить username
+        filename = get_login_by_user_id(user_id) + "_" + str(Plant.query.filter_by(plant_id=data["plant_id"]).first().name) + "_" + str(uuid.uuid4()) + ".jpg"
         file_data = base64.b64decode(image)
         with open(app.config["UPLOAD_FOLDER"] + filename, "wb") as f:
             f.write(file_data)
         new_photo = Photo(plant_id=data["plant_id"], filename=filename)
         db.session.add(new_photo)
         db.session.commit()
-        print("photo_id", new_photo.photo_id)
         photo_id = new_photo.photo_id
 
-    new_note = Note(note_name=data["name"], description=data["description"], date_added=note_date, photo_id=photo_id, plant_id=data["plant_id"])
+    new_note = Note(note_name=data["name"], description=data["description"], date_added=note_date, photo_id=photo_id,
+                    plant_id=data["plant_id"])
     db.session.add(new_note)
     db.session.commit()
 
     return jsonify({"status": "success"}), 200
 
 
-def add_task(data):
+def add_task(data, user_id):
+    if not Plant.query.filter((Plant.user_id == user_id) & (Plant.plant_id == data["plant_id"])).first():
+        return jsonify({"status": "Forbidden"}), 403
+
     if "name" not in data.keys() or "description" not in data.keys() or "plant_id" not in data.keys() or "task_type_id" not in data.keys() or "frequency_id" not in data.keys():
         return jsonify({"status": "Bad Request"}), 400
 
@@ -495,14 +625,20 @@ def add_task(data):
     else:
         task_date = datetime.datetime.today()
 
-    task = Task(task_name=data["name"], task_description=data["description"], plant_id=data["plant_id"], task_type_id=data["task_type_id"], repeat_type_id=data["frequency_id"], task_date=task_date)
+    task = Task(task_name=data["name"], task_description=data["description"], plant_id=data["plant_id"],
+                task_type_id=data["task_type_id"], repeat_type_id=data["frequency_id"], task_date=task_date)
     db.session.add(task)
     db.session.commit()
+
+    update_task_calendar(task)
 
     return jsonify({"status": "success"}), 200
 
 
-def update_plant(data):
+def update_plant(data, user_id):
+    if not Plant.query.filter((Plant.user_id == user_id) & (Plant.plant_id == data["plant_id"])).first():
+        return jsonify({"status": "Forbidden"}), 403
+
     if "plant_id" not in data.keys() or "plant_name" not in data.keys() or "plant_science_name" not in data.keys() or "plant_place" not in data.keys():
         return jsonify({"error": "Some attributes don't exist"}), 400
 
@@ -521,8 +657,8 @@ def update_plant(data):
     return jsonify({"result": "Success"}), 200
 
 
-def update_note(note_id, name, description, plant_id):
-    note = Note.query.filter_by(note_id=note_id).first()
+def update_note(note_id, name, description, plant_id, user_id):
+    note = Note.query.join(Plant, Plant.plant_id == Note.plant_id).filter((Note.note_id == note_id) & (Plant.user_id == user_id)).first()
     if not note:
         return jsonify({"status": "Note not found"}), 404
 
@@ -534,8 +670,8 @@ def update_note(note_id, name, description, plant_id):
     return jsonify({"status": "success"}), 200
 
 
-def update_task(task_id, task_name, task_description, task_date, task_type_id, repeat_type_id):
-    task = Task.query.filter_by(task_id=task_id).first()
+def update_task(task_id, task_name, task_description, task_date, task_type_id, repeat_type_id, user_id):
+    task = Task.query.join(Plant, Plant.plant_id == Task.plant_id).filter((Task.task_id == task_id) & (Plant.user_id == user_id)).first()
     if not task:
         return jsonify({"status": "Task Not Found"}), 404
     task.task_name = task_name
@@ -548,7 +684,10 @@ def update_task(task_id, task_name, task_description, task_date, task_type_id, r
     return jsonify({"status": "success"}), 200
 
 
-def add_photo(data):
+def add_photo(data, user_id):
+    if not Plant.query.filter((Plant.user_id == user_id) & (Plant.plant_id == data["plant_id"])).first():
+        return jsonify({"status": "Forbidden"}), 403
+
     if "plant_id" not in data.keys():
         return jsonify({"error": "Some attributes doesn't exist"}), 400
     if 'image' not in data.keys():
@@ -556,30 +695,12 @@ def add_photo(data):
 
     image = data["image"]
 
-    if not is_allowed_image(image.filename):
-        return jsonify({"error": "File type not allowed"}), 400
+    # Добавить проверку на тип
 
-    filename = str(Plant.query.get(data["plant_id"]).name) + str(random.randrange(1, 10000))  # Добавить username
+    filename = get_login_by_user_id(user_id) + "_" + Plant.query.filter_by(plant_id=data["plant_id"]).first().name + "_" + str(uuid.uuid4()) + ".jpg"
     new_photo = Photo(plant_id=data["plant_id"], filename=filename)
 
-    image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
-    db.session.add(new_photo)
-    db.session.commit()
-
-    return jsonify({"status": "success"}), 200
-
-
-def add_photo_without_plant(data):
-    if 'image' not in data.keys():
-        return jsonify({"error": "No file part"}), 400
-
-    image = data["image"]
-
-    filename = "username" + str(random.randrange(1, 10000)) + ".jpg"  # Добавить username
-    new_photo = Photo(plant_id=None, filename=filename)
-    header, encoded = image.split(",", 1)
-    file_data = base64.b64decode(encoded)
+    file_data = base64.b64decode(image)
     with open(app.config["UPLOAD_FOLDER"] + filename, "wb") as f:
         f.write(file_data)
 
@@ -589,16 +710,20 @@ def add_photo_without_plant(data):
     return jsonify({"status": "success"}), 200
 
 
-def add_main_photo(data):
+def add_main_photo(data, user_id):
+    if not Plant.query.filter((Plant.user_id == user_id) & (Plant.plant_id == data["plant_id"])).first():
+        return jsonify({"status": "Forbidden"}), 403
+
     if "plant_id" not in data.keys():
         return jsonify({"error": "Some attributes doesn't exist"}), 400
     if 'main_photo' not in data.keys():
         return jsonify({"error": "No file part"}), 400
 
     plant = db.session.get(Plant, data["plant_id"])
-    filename = "null_" + str(random.randrange(1, 10000))
     if plant:
-        filename = str(plant.name) + str(random.randrange(1, 10000)) + ".jpg"
+        filename = get_login_by_user_id(user_id) + "_" + str(plant.name) + "_" + str(uuid.uuid4()) + ".jpg"
+    else:
+        raise Exception
     file_data = base64.b64decode(data["main_photo"])
     with open(app.config["UPLOAD_FOLDER"] + filename, "wb") as f:
         f.write(file_data)
@@ -614,7 +739,13 @@ def add_main_photo(data):
     return jsonify({"status": "success"}), 200
 
 
-def change_main_photo(plant_id, photo_id, selected):
+def change_main_photo(plant_id, photo_id, selected, user_id):
+    if not Plant.query.filter((Plant.user_id == user_id) & (Plant.plant_id == plant_id)).first():
+        return jsonify({"status": "Forbidden"}), 403
+
+    if not Plant.query.join(Photo, Photo.plant_id == Plant.plant_id).filter((Plant.user_id == user_id) & (Photo.photo_id == photo_id)).first():
+        return jsonify({"status": "Forbidden"}), 403
+
     # Находим существующую запись
     main_photo = MainPhoto.query.filter_by(photo_id=photo_id).first()
 
@@ -642,8 +773,8 @@ def change_main_photo(plant_id, photo_id, selected):
         return jsonify({"status": "No changes made"}), 200
 
 
-def change_plant_photo(plant_id, photo_id):
-    photo = Photo.query.filter(Photo.photo_id == photo_id).first()
+def change_plant_photo(plant_id, photo_id, user_id):
+    photo = Photo.query.join(Plant, Plant.plant_id == Photo.plant_id).filter(Photo.photo_id == photo_id, Plant.user_id == user_id).first()
     if photo:
         photo.plant_id = plant_id
         db.session.commit()
@@ -652,7 +783,14 @@ def change_plant_photo(plant_id, photo_id):
     return jsonify({"status": "Photo not found"}), 404
 
 
-def is_main_photo(plant_id, photo_id):
+def is_main_photo(plant_id, photo_id, user_id):
+    if not Plant.query.filter((Plant.user_id == user_id) & (Plant.plant_id == plant_id)).first():
+        return jsonify({"status": "Forbidden"}), 403
+
+    if not Plant.query.join(Photo, Photo.plant_id == Plant.plant_id).filter(
+            (Plant.user_id == user_id) & (Photo.photo_id == photo_id)).first():
+        return jsonify({"status": "Forbidden"}), 403
+
     main_photo = MainPhoto.query.filter(MainPhoto.photo_id == photo_id, MainPhoto.plant_id == plant_id).first()
     if main_photo:
         return jsonify({"status": "success", "isMainPhoto": True})
@@ -682,13 +820,18 @@ def get_repeat_types():
     return jsonify(result), 200
 
 
-def delete_photo(data):
+def delete_photo(data, user_id):
     if "photo_id" not in data.keys():
-        return jsonify({"status": "Bad Request"}), 404
+        return jsonify({"status": "Bad Request"}), 400
+
+    if not Plant.query.join(Photo, Photo.plant_id == Plant.plant_id).filter(
+            (Plant.user_id == user_id) & (Photo.photo_id == data["photo_id"])).first():
+        return jsonify({"status": "Forbidden"}), 403
 
     note = Note.query.filter_by(photo_id=data["photo_id"]).first()
     if note:
         note.photo_id = None
+        db.session.commit()
 
     main_photo = MainPhoto.query.filter_by(photo_id=data["photo_id"]).first()
     if main_photo:
@@ -704,25 +847,32 @@ def delete_photo(data):
     return jsonify({"status": "success"}), 200
 
 
-def delete_note(data):
+def delete_note(data, user_id):
     if "note_id" not in data.keys():
         return jsonify({"status": "Bad Request"}), 400
+
+    if not Plant.query.join(Note, Note.plant_id == Plant.plant_id).filter(
+            (Plant.user_id == user_id) & (Note.plant_id == Plant.plant_id)).first():
+        return jsonify({"status": "Forbidden"}), 403
 
     note = Note.query.filter_by(note_id=data["note_id"]).first()
     photo = Photo.query.filter_by(photo_id=note.photo_id).first()
     if photo:
-        delete_photo({"photo_id": photo.photo_id})
+        delete_photo({"photo_id": photo.photo_id}, user_id)
 
     db.session.delete(note)
     db.session.commit()
     return jsonify({"status": "success"}), 200
 
 
-def delete_task(data):
+def delete_task(data, user_id):
     if "task_id" not in data.keys():
         return jsonify({"status": "Bad Request"}), 400
 
-    task = Task.query.filter_by(task_id=data["task_id"]).first()
+    task = Task.query.join(Plant, Plant.plant_id == Task.task_id).filter((Task.task_id == data["task_id"]) & (Plant.user_id == user_id)).first()
+    if not task:
+        return jsonify({"status": "Task Not Found"}), 404
+
     Calendar.query.filter_by(task_id=task.task_id).delete()
 
     db.session.delete(task)
@@ -730,4 +880,36 @@ def delete_task(data):
     return jsonify({"status": "success"}), 200
 
 
-app.run()
+def delete_plant(data, user_id):
+    if "plant_id" not in data.keys():
+        return jsonify({"status": "Bad Request"}), 400
+
+    plant = Plant.query.filter_by(plant_id=data["plant_id"], user_id=user_id).first()
+    if not plant:
+        jsonify({"status": "Plant Not Found"}), 404
+
+    photos = Photo.query.filter_by(plant_id=plant.plant_id).all()
+    notes = Note.query.filter_by(plant_id=plant.plant_id).all()
+    tasks = Task.query.filter_by(plant_id=plant.plant_id).all()
+
+    for p in photos:
+        delete_photo({"photo_id": p.photo_id}, user_id)
+    for n in notes:
+        delete_note({"note_id": n.note_id}, user_id)
+    for t in tasks:
+        delete_task({"task_id": t.task_id}, user_id)
+
+    db.session.delete(plant)
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
+
+
+def get_username(user_id):
+    user = User.query.filter_by(user_id=user_id).first()
+    if not user:
+        return jsonify({"status": "User Not Found"}), 404
+    return jsonify({"username": user.username}), 200
+
+
+if __name__ == "__main__":
+    app.run()

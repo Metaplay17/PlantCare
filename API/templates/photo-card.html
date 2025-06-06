@@ -1,10 +1,13 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/photo-card.css') }}">
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
 <div class="photo-card-main">
     <div class="photo-card">
         <!-- Выбор растения -->
         <label for="plant-select" class="photo-label">Выберите растение:</label>
         <select id="plant-select" class="plant-select">
-            <option value="" disabled selected>Select a plant</option>
+            <option value="" disabled selected>Выберите растение</option>
         </select>
 
         <!-- Блок с изображением -->

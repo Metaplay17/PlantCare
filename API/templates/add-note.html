@@ -1,20 +1,23 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/add-note.css') }}">
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
 <form id="add-note-form">
-    <label>Title</label>
+    <label>Название</label>
     <input type="text" id="note-name-input" placeholder="Note title" required>
     
-    <label>Description</label>
+    <label>Описание</label>
     <textarea id="note-description-input" placeholder="Write your note here..." rows="4" required></textarea>
     
-    <label>Photo</label>
+    <label>Фото</label>
     <input type="file" id="note-photo-input" accept="image/jpeg, image/png, image/jpg">
     
-    <label>Plant</label>
+    <label>Растение</label>
     <select id="plant-select" required>
         <option value="" disabled selected>Select a plant</option>
     </select>
     
-    <label>Date</label>
+    <label>Дата</label>
     <input type="date" id="note-date-input" required>
     
     <button id="add-note-submit-btn">Submit</button>

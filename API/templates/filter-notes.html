@@ -1,15 +1,18 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/filter-notes.css') }}">
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
 <form id="filter-note-form">  
-    <label>Plant</label>
+    <label>Растение</label>
     <select id="plant-select">
-        <option value="" disabled selected>Select a plant</option>
+        <option value="" disabled selected>Выберите растение</option>
     </select>
     
-    <label>Date From</label>
+    <label>От</label>
     <input type="date" id="date-from-input">
 
-    <label>Date To</label>
+    <label>До</label>
     <input type="date" id="date-to-input">
     
-    <button id="filter-notes-btn">Filter</button>
+    <button id="filter-notes-btn">Фильтры</button>
 </form>

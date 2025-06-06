@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sign-up.css') }}">
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-card">
+            <h2 class="register-title">Создать аккаунт</h2>
+            
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="login" class="form-label">Логин</label>
+                    <input type="text" id="login" class="form-input" placeholder="Придумайте логин" required>
+                    <div class="hint">От 4 до 20 символов</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" id="email" class="form-input" placeholder="Ваш email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="username" class="form-label">Имя пользователя</label>
+                    <input type="text" id="username" class="form-input" placeholder="Как вас называть" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">Пароль</label>
+                    <input type="password" id="password" class="form-input" placeholder="Придумайте пароль" required>
+                    <div class="hint">Минимум 8 символов</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm-password" class="form-label">Повторите пароль</label>
+                    <input type="password" id="confirm-password" class="form-input" placeholder="Повторите пароль" required>
+                </div>
+                
+                <button class="register-btn" id="register-btn">Зарегистрироваться</button>
+                
+                <div class="login-link">
+                    Уже есть аккаунт? <a href="http://localhost/login">Войти</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+<script src="../static/js/signup.js"></script>
+</html>

@@ -1,4 +1,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/note-card.css') }}">
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
 <div class="note-card-main">
     <div class="form-container">
         <!-- Левая часть: Фото -->
@@ -11,22 +14,22 @@
         <!-- Правая часть: Форма -->
         <div class="right-side">
             <div class="note-form">
-                <label for="note-title" class="note-info">Name</label>
+                <label for="note-title" class="note-info">Название</label>
                 <input class="def-input" type="text" id="note-name" placeholder="Enter note title" required>
 
-                <label for="note-description" class="note-info">Description</label>
+                <label for="note-description" class="note-info">описание</label>
                 <textarea class="def-input" id="note-description" rows="5" placeholder="Enter description" required></textarea>
 
                 <label for="note-plant" class="note-info">Plant</label>
                 <select class="plant-select" id="plant-select">
-                    <option value="" disabled selected>Select a plant</option>
+                    <option value="" disabled selected>Выберите растение</option>
                 </select>
 
-                <label for="note-date" class="note-info">Date</label>
+                <label for="note-date" class="note-info">Дата</label>
                 <input class="def-input" type="date" id="note-date" disabled>
 
-                <button class="def-btn" id="save-note-btn">SAVE</button>
-                <button class="del-btn" id="delete-note-btn">DELETE</button>
+                <button class="def-btn" id="save-note-btn">Сохранить</button>
+                <button class="del-btn" id="delete-note-btn">Удалить</button>
             </div>
         </div>
     </div>

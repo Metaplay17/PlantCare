@@ -1,4 +1,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/plant-card.css') }}">
+<div class="overlay" id="overlay">
+    <div class="loader"></div>
+</div>
 <div class="plant-card-main">
     <div class="form-container">
         <!-- Левая часть: Фото и кнопки -->
@@ -6,24 +9,26 @@
             <div class="image-block" id="image-block">
             </div>
             <div class="plant-card-controls">
-                <button class="def-btn" id="related-tasks-button">RELATED TASKS</button>
-                <button class="def-btn" id="related-notes-button">RELATED NOTES</button>
+                <button class="def-btn" id="related-tasks-button">Связанные задачи</button>
+                <button class="def-btn" id="related-notes-button">Связанные заметки</button>
             </div>
         </div>
 
         <!-- Правая часть: Форма -->
         <div class="right-side">
             <div class="plant-form">
-                <label for="plant-name" class="plant-info">Name</label>
+                <label for="plant-name" class="plant-info">Название</label>
                 <input class="def-input" id="plant-name" placeholder="Enter plant name">
 
-                <label for="plant-science-name" class="plant-info">Scientific Name</label>
+                <label for="plant-science-name" class="plant-info">Научное название</label>
                 <input class="def-input" id="plant-science-name" placeholder="e.g. Rosa rubiginosa">
 
-                <label for="plant-place" class="plant-info">Place</label>
+                <label for="plant-place" class="plant-info">Место</label>
                 <input class="def-input" type="number" id="plant-place" placeholder="Shelf number">
 
-                <button class="def-btn" id="save-btn">SAVE</button>
+                <button class="def-btn" id="save-btn">Сохранить</button>
+
+                <button class="del-btn" id="delete-btn">Удалить</button>
             </div>
         </div>
     </div>

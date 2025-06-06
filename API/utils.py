@@ -1,4 +1,5 @@
 import datetime
+from flask import jsonify
 
 from constants import *
 from models import *
@@ -46,7 +47,11 @@ def get_repeat_type_desc_by_type_id(type_id):
     return repeat_type.description
 
 
-def get_plant_id_by_photo(photo_id):
+def get_plant_id_by_photo(photo_id, user_id):
+    if not Plant.query.join(Photo, Photo.plant_id == Plant.plant_id).filter(
+            (Plant.user_id == user_id) & (Photo.photo_id == photo_id)).first():
+        return jsonify({"status": "Forbidden"}), 403
+
     photo = Photo.query.filter(Photo.photo_id == photo_id).first()
     return jsonify({"plant_id": photo.plant_id})
 
@@ -92,5 +97,28 @@ def update_task_calendar(task):
         db.session.rollback()
         raise e
 
+
+def is_login_exist(login):
+    user = User.query.filter_by(login=login).first()
+    if user:
+        return True
+    return False
+
+
+def is_email_exist(email):
+    user = User.query.filter_by(email=email).first()
+    if user:
+        return True
+    return False
+
+
+def get_user_id_by_login(login):
+    user = User.query.filter_by(login=login).first()
+    return user.user_id
+
+
+def get_login_by_user_id(user_id):
+    user = User.query.filter_by(user_id=user_id).first()
+    return user.login
 
 

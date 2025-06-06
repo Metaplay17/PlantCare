@@ -4,6 +4,7 @@
     gap: 20px; /* расстояние между фото */
     padding: 20px;
     box-sizing: border-box;
+    width: 100%;
 }
 
 .photo-card {
