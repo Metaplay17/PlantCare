@@ -1,6 +1,7 @@
 let plants = {};
 let selector = "";
 let resp;
+let response;
 let currentNotes = [];
 let currentPlants = [];
 let searchNoteInput = "";
@@ -86,7 +87,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
       }
       else {
-        alert("ERROR");
+        response = await response.json();
+        alert(response["status"]);
       }
     break;
 
@@ -141,7 +143,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Проверяем статус ответа
         if (response.status !== 200) {
-            alert("SERVER ERROR");
+            response = await response.json();
+            alert(response["status"]);
         }
         else {
           window.location.href = "/#Plants";
@@ -275,7 +278,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Проверяем статус ответа
         if (response.status !== 200) {
-            alert("SERVER ERROR");
+          response = await response.json();
+          alert(response["status"]);
         }
         else {
           window.location.hash = "#Notes";
@@ -387,7 +391,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         break;
     case "Notes":
       await LoadPage("Notes");
-      respNotes = await ServerRequest("GetNotes");
+      respNotes = await ServerRequest("GetNotes", {});
       let defNotes = await respNotes.json();
 
       sortingSelector = document.getElementById("sorting-select");
@@ -527,7 +531,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       let tasks = await ServerRequest("GetTasks", {});
       tasks = await tasks.json();
 
-      let taskTypes = await ServerRequest("GetTaskTypes");
+      let taskTypes = await ServerRequest("GetTaskTypes", {});
       taskTypes = await taskTypes.json();
       const taskTypeSelector = document.getElementById("task-type-select");
       taskTypes.forEach(type => {
@@ -539,7 +543,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return map;
       }, {});
 
-      let taskFrequencies = await ServerRequest("GetRepeatTypes");
+      let taskFrequencies = await ServerRequest("GetRepeatTypes", {});
       taskFrequencies = await taskFrequencies.json();
       const frequencySelector1 = document.getElementById("frequency-select");
       taskFrequencies.forEach(frequency => {
@@ -619,7 +623,8 @@ async function LoadPage(action) {
     return;
   }
   else {
-    document.getElementById("content-block").innerHTML = "<h1>Ошибка при загрузке страницы</h1>";
+    response = await response.json();
+    document.getElementById("content-block").innerHTML = `<h1>${response["status"]}</h1>`;
   }
 }
 
@@ -629,7 +634,7 @@ async function ServerRequest(action, actionData) {
         "actionData": actionData
     };
 
-    let response = await fetch("/api", {
+    response = await fetch("/api", {
         method: 'POST',
         credentials: "include",
         body: JSON.stringify(data),
@@ -791,7 +796,7 @@ async function DisplayPlant(plant_id) {
       return;
     }
 
-    const response = await ServerRequest("UpdatePlant", {
+    response = await ServerRequest("UpdatePlant", {
       "plant_id": plant_id,
       "plant_name": document.getElementById("plant-name").value,
       "plant_science_name": document.getElementById("plant-science-name").value,
@@ -799,9 +804,11 @@ async function DisplayPlant(plant_id) {
     });
 
     if (response.status === 200) {
+      window.location.hash = "#Plants";
       return;
     } else {
-      alert(`ERROR: ${response.status}`);
+      response = await response.json();
+      alert(response["status"]);
     }
   }
 
@@ -814,7 +821,8 @@ async function DisplayPlant(plant_id) {
   deleteBtn.addEventListener("click", async () => {
     resp = await ServerRequest("DeletePlant", {"plant_id": plant_id});
     if (resp.status != 200) {
-      alert("ERROR", resp.status);
+      resp = await resp.json();
+      alert(resp["status"]);
     }
   });
 }
@@ -867,7 +875,7 @@ async function DisplayPhoto(photo_id) {
     resp = await ServerRequest("IsMainPhoto", {"plant_id": plant_id, "photo_id": photo_id});
     let json = await resp.json();
     if (resp.status != 200) {
-        alert(`ERROR: ${json["status"]}`);
+        alert(json["status"]);
     }
     else {
         checkbox.checked = json["isMainPhoto"];
@@ -885,7 +893,8 @@ async function DisplayPhoto(photo_id) {
         window.location.hash = "#Photos";
       }
       else {
-        alert(`ERROR: ${resp.status}`);
+        resp = await resp.json();
+        alert(resp.status);
       }
     });
 
@@ -900,7 +909,7 @@ async function DisplayPhoto(photo_id) {
         resp = await ServerRequest("ChangeMainPhoto", {"plant_id": selector.value, "photo_id": photo_id, "selected": checkbox.checked});
         let json = await resp.json();
         if (resp.status != 200) {
-            alert(`ERROR: ${json["status"]}`);
+            alert(json["status"]);
         }
     };
 
@@ -917,7 +926,7 @@ async function DisplayPhoto(photo_id) {
         resp = await ServerRequest("IsMainPhoto", {"plant_id": selector.value, "photo_id": photo_id});
         let json = await resp.json();
         if (resp.status != 200) {
-            alert(`ERROR: ${json["status"]}`);
+            alert(json["status"]);
         }
         else {
             checkbox.checked = json["isMainPhoto"];
@@ -925,7 +934,7 @@ async function DisplayPhoto(photo_id) {
         resp = await ServerRequest("ChangePlantPhoto", {"plant_id": selector.value, "photo_id": photo_id});
         json = await resp.json();
         if (resp.status != 200) {
-            alert(`ERROR: ${json["status"]}`);
+            alert(json["status"]);
         }
     };
 
@@ -1010,7 +1019,7 @@ async function DisplayNote(note_id) {
       return;
     }
 
-    const response = await ServerRequest("UpdateNote", {
+    response = await ServerRequest("UpdateNote", {
       "note_id": note_id,
       "name": document.getElementById("note-name").value,
       "description": document.getElementById("note-description").value,
@@ -1020,7 +1029,8 @@ async function DisplayNote(note_id) {
     if (response.status === 200) {
       window.location.href = "#Notes";
     } else {
-      alert(`ERROR: ${response.status}`);
+      response = await response.json();
+      alert(response["status"]);
     }
   }
 
@@ -1031,7 +1041,8 @@ async function DisplayNote(note_id) {
   document.getElementById("delete-note-btn").addEventListener("click", async () => {
     resp = await ServerRequest("DeleteNote", {"note_id": note_id});
     if (resp.status != 200) {
-      alert(`ERROR:  ${resp.status}`);
+      resp = await resp.json();
+      alert(resp["status"]);
     }
     else {
       window.location.hash = "#Notes";
@@ -1158,7 +1169,7 @@ async function DisplayTask(task_id) {
       return;
     }
 
-    const response = await ServerRequest("UpdateTask", {
+    response = await ServerRequest("UpdateTask", {
       "task_id": task_id,
       "plant_id": selector.value,
       "task_name": document.getElementById("task-name").value,
@@ -1172,7 +1183,7 @@ async function DisplayTask(task_id) {
       window.location.href = "#Tasks";
       return;
     } else {
-      alert(`ERROR: ${response.status}`);
+      alert(response["status"]);
     }
   }
 
@@ -1191,7 +1202,8 @@ async function DisplayTask(task_id) {
   document.getElementById("delete-task-btn").addEventListener("click", async () => {
     resp = await ServerRequest("DeleteTask", {"task_id": task_id});
     if (resp.status != 200) {
-      alert(`ERROR:  ${resp.status}`);
+      resp = await resp.json();
+      alert(resp["status"]);
     }
     else {
       window.location.hash = "#Tasks";
@@ -1305,8 +1317,8 @@ async function loadCalendar() {
       });
       target.classList.add("selected-day");
       await ShowEvents(selectedDate);
-      StopLoading();
     }
+    StopLoading();
   });
 
   // Инициализация
@@ -1319,7 +1331,8 @@ async function ShowEvents(date) {
   taskList.innerHTML = '';
   resp = await ServerRequest("GetDateTasks", {"date": date});
   if (resp.status != 200) {
-    alert(`ERROR: ${resp.status}`);
+    resp = await resp.json();
+    alert(resp["status"]);
     return;
   }
   resp = await resp.json();

@@ -1,16 +1,10 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from extensions import app, db
 from datetime import date
-from flask_cors import CORS
 from flask_migrate import Migrate
+from dotenv import load_dotenv
 
-app = Flask("app")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:qazedcrfvs1A@localhost/PlantCare'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-CORS(app,
-     origins=[r"http://localhost:\d+"],
-     supports_credentials=True)
-db = SQLAlchemy(app)
+load_dotenv()
+
 migrate = Migrate(app, db)
 
 

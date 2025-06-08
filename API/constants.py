@@ -9,5 +9,7 @@ EXCLUDED_ENDPOINTS = [
     'log_in',
     'log_in_page',
     'sign_up_page',
-    'register'
+    'register',
+    'confirm_email',
+    'recover_password_page'
 ]

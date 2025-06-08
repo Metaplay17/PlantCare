@@ -265,6 +265,12 @@ body {
   opacity: 0;
 }
 
+h2 {
+    color: #4caf50;
+    margin: auto;
+    font-size: 3vw;
+}
+
 
 
 /* Анимация вращения */

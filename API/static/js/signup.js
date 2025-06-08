@@ -44,7 +44,10 @@ document.getElementById("register-btn").addEventListener("click", async (event) 
     });
 
     let ans = await response.json();
-    if (response.status != 200) {
+    if (response.status == 400 || response.status == 409) {
+        alert(ans["message"])
+    }
+    else if (response.status != 200) {
         alert(ans["status"]);
     }
     else {

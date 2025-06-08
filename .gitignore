@@ -1,1 +1,5 @@
 .env
+API/static/userphotos
+API/db_backups
+API/app.log
+API/app1.log

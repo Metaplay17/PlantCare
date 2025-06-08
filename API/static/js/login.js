@@ -28,7 +28,10 @@ document.getElementById("login-btn").addEventListener("click", async (event) => 
         }
     });
     let message = await response.json();
-    if (response.status != 200) {
+    if (response.status == 403) {
+        alert("Неверный логин или пароль");
+    }
+    else if (response.status != 200) {
         alert(message["status"])
         return;
     }
