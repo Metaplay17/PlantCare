@@ -32,10 +32,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   let action = window.location.hash.split('#')[1].split("/")[0];
   let subject = window.location.hash.split('#')[1].split("/")[1];
   StartLoading();
+  console.log("started loading: ", new Date().getTime() % 10000);
 
   switch (action) {
     case "Plants":
       await LoadPage("Plants");
+      console.log("page loaded: ", new Date().getTime() % 10000);
       const searchInput = document.getElementById("search-input");
       searchInput.addEventListener("input", async () => {
         let searchString = searchInput.value;
@@ -47,6 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       response = await ServerRequest("GetPlants", {});
       if (response.status === 200) {
         plants = await response.json();
+        console.log("plants loaded: ", new Date().getTime() % 10000);
         currentPlants = plants;
 
         sortingSelector = document.getElementById("sorting-select");
@@ -66,6 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             break;
         }
         renderPlants(currentPlants);
+        console.log("started rendered: ", new Date().getTime() % 10000);
 
         sortingSelector.addEventListener("change", () => {
           let sortingType = sortingSelector.value;
@@ -336,8 +340,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             "frequency_id": frequencyId
         });
 
-        // Проверяем статус ответа
-        if (response.status !== 200) {
+        if (response.status == 409) {
+          alert("Задача с таким именем уже существует");
+        }
+        else if (response.status !== 200) {
             alert("SERVER ERROR");
         }
         else {
@@ -592,6 +598,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.dispatchEvent(new HashChangeEvent('hashchange'));
   StopLoading();
+  console.log("stopped loading: ", new Date().getTime() % 10000);
 });
 
 async function LoadPage(action) {
@@ -823,6 +830,9 @@ async function DisplayPlant(plant_id) {
     if (resp.status != 200) {
       resp = await resp.json();
       alert(resp["status"]);
+    }
+    else {
+      window.location.hash = "#Plants";
     }
   });
 }

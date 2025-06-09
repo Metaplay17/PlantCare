@@ -11,5 +11,7 @@ EXCLUDED_ENDPOINTS = [
     'sign_up_page',
     'register',
     'confirm_email',
-    'recover_password_page'
+    'recover_password_page',
+    'recover_password',
+    'send_recover_code'
 ]

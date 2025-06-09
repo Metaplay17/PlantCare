@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, make_response
+from flask import render_template, request, redirect, url_for, make_response, current_app
 
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -17,11 +17,12 @@ from logic import *
 import sendmail
 import bcrypt
 import random
+import time
 from custom_exceptions import *
 from constants import *
 from utils import is_email_exist, is_login_exist, get_user_id_by_login
-from redis_conf import r
-from extensions import db
+from redis_conf import r, jobstore
+from extensions import app, db
 from models import User
 from datetime import datetime, timedelta
 
@@ -47,6 +48,19 @@ app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
 
 scheduler = BackgroundScheduler()
+scheduler.add_jobstore(jobstore)
+
+
+@app.before_request
+def start_timer():
+    request.start_time = time.time()
+
+
+@app.after_request
+def log_request_time(response):
+    elapsed = (time.time() - request.start_time) * 1000  # в мс
+    app.logger.info(f"Request to {request.path} took {elapsed:.2f}ms")
+    return response
 
 
 @app.before_request
@@ -84,7 +98,6 @@ def refresh_token_middleware():
         redirect_response = redirect(redirect_url)
         for header, value in refresh_response.headers:
             redirect_response.headers[header] = value
-
         return redirect_response
 
     except Exception as e:
@@ -130,7 +143,7 @@ def core():
     login = get_jwt_identity()
     user_id = get_user_id_by_login(login)
     data = request.json
-    app.logger.info(f"Action: {data['action']} ActionData: {data['actionData']}, user_id: {user_id}")
+    app.logger.info(f"Action: {data['action']} ActionData: {data['actionData'].keys()}, user_id: {user_id}")
     if data["action"] == "GetPage":
         if data["actionData"]["Page"] == "Plants":
             return render_template('plants.html')
@@ -334,7 +347,7 @@ def register():
 
 @app.route('/auth/send-recover-code', methods=['POST'])
 def send_recover_code():
-    data = request.json()
+    data = request.json
     if "email" not in data.keys():
         abort(400)
     email = data["email"]
@@ -343,7 +356,7 @@ def send_recover_code():
 
     app.logger.info(f"Send recover code attempt, email: {data['email']}")
     email = data["email"]
-    user = User.query.filter_by(email=email)
+    user = User.query.filter_by(email=email).first()
     r.setex(f"last_recover_request:{email}", 180, datetime.now().isoformat())
     if not user:
         abort(404)
@@ -351,42 +364,53 @@ def send_recover_code():
     code = random.randint(100000, 999999)
     user.code = code
     if sendmail.send_recover_email(email, code):
-        scheduler.add_job(expire_usercode(user.user_id), 'date', run_date=datetime.now() + timedelta(minutes=3))
+        scheduler.add_job(expire_usercode, 'date', [user.user_id], run_date=datetime.now() + timedelta(minutes=3))
+        app.logger.info(f"Task added: refresh recover code for email: {email}")
     else:
         app.logger.critical(f"recover email was not sent, email: {email}")
         raise EmailNotSent
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
 
 
 def expire_usercode(user_id):
-    user = User.query.filter_by(user_id=user_id)
-    if not user:
-        app.logger.critical(f"User to expire usercode not found, user_id: {user_id}")
-        raise UserNotFound
+    with app.app_context():
+        user = User.query.filter_by(user_id=user_id).first()
+        if not user:
+            app.logger.critical(f"User to expire usercode not found, user_id: {user_id}")
+            raise UserNotFound
 
-    user.usercode = None
+        app.logger.info(f"Code was expired for user_id = {user_id}")
+        user.code = None
+        db.session.commit()
 
 
 @app.route('/auth/recover-password', methods=['POST'])
 def recover_password():
-    data = request.json()
+    data = request.json
     if "email" not in data.keys() or "code" not in data.keys() or "new_password" not in data.keys():
         abort(400)
     app.logger.info(f"Recover password attempt, email: {data['email']}")
     email = data["email"]
-    code = data["code"]
+    try:
+        code = int(data["code"])
+    except ValueError:
+        abort(400)
+
     new_password = data["new_password"]
 
     if not email or not code or not new_password:
         abort(400)
 
-    user = User.query.filter_by(email=email)
+    user = User.query.filter_by(email=email).first()
     if not user:
         abort(404)
     if user.code != code:
         abort(403)
     salt = bcrypt.gensalt()
-    user.password_hash = bcrypt.hashpw(data["password"].encode(), salt).decode('utf-8')
+    user.password_hash = bcrypt.hashpw(data["new_password"].encode(), salt).decode('utf-8')
     db.session.commit()
+    return jsonify({"status": "success"}), 200
 
 
 @app.route('/auth/confirm_email', methods=['GET'])
@@ -427,6 +451,9 @@ def log_in():
         user = User.query.filter_by(login=login).first()
         if not user:
             abort(403)
+
+        if not user.isActivated:
+            return jsonify({"status": "Активируйте аккаунт"}), 406
 
         password_hash = user.password_hash.encode()
         if not bcrypt.checkpw(password_bytes, password_hash):
@@ -535,6 +562,16 @@ def handle_general_exception(e):
     return jsonify({"status": "Internal Server Error"}), 500
 
 
+@app.cli.command("list-jobs")
+def list_jobs():
+    """Показывает все задачи"""
+    jobs = scheduler.get_jobs()
+    if not jobs:
+        print("Нет активных задач")
+    for job in jobs:
+        print(f"ID: {job.id}, Следующий запуск: {job.next_run_time}")
+
+
 if __name__ == "__main__":
-    app.run()
     scheduler.start()
+    app.run()

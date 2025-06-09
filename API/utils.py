@@ -1,5 +1,4 @@
 from extensions import app
-import datetime
 from flask import jsonify, abort
 
 from constants import *
@@ -11,7 +10,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 import subprocess
-from datetime import datetime
+import datetime
 import os
 
 
@@ -27,7 +26,7 @@ def logical_backup():
     db_name = os.getenv("DB_NAME")
     db_user = os.getenv("DB_USER")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_file = os.path.join(output_dir, f"{db_name}_backup_{timestamp}.sql")
 
     env = os.environ.copy()
@@ -73,7 +72,7 @@ def physical_backup():
         app.logger.critical("env variable for db backup not found")
         return
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_dir = os.path.join(output_dir, f"physical_backup_{timestamp}")
     os.makedirs(backup_dir, exist_ok=True)
 
@@ -177,7 +176,7 @@ def get_plant_id_by_photo(photo_id, user_id):
     return jsonify({"plant_id": photo.plant_id})
 
 
-def update_task_calendar(task):
+def update_task_calendar(task, start_date):
     # Удаление старых задач
     Calendar.query.filter_by(task_id=task.task_id).delete()
 
@@ -204,7 +203,7 @@ def update_task_calendar(task):
 
     # Генерация новых задач
     tasks = []
-    start = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    start = start_date
     end = start + datetime.timedelta(days=365)
     while start <= end:
         tasks.append(Calendar(task_id=task.task_id, entry_date=start))

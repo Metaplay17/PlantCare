@@ -345,7 +345,7 @@ def add_task(data, user_id):
     db.session.add(task)
     db.session.commit()
 
-    update_task_calendar(task)
+    update_task_calendar(task, datetime.strptime(data["date"], "%Y-%m-%d").date())
 
     return jsonify({"status": "success"}), 200
 
@@ -396,7 +396,7 @@ def update_task(task_id, task_name, task_description, task_date, task_type_id, r
     task.repeat_type_id = repeat_type_id
 
     db.session.commit()
-    update_task_calendar(task)
+    update_task_calendar(task, datetime.strptime(task_date, "%Y-%m-%d").date())
     return jsonify({"status": "success"}), 200
 
 
@@ -404,7 +404,7 @@ def add_photo(data, user_id):
     if not Plant.query.filter((Plant.user_id == user_id) & (Plant.plant_id == data["plant_id"])).first():
         return jsonify({"Растение не найдено"}), 404
 
-    if "plant_id" not in data.keys() or 'image':
+    if "plant_id" not in data.keys() or 'image' not in data.keys():
         abort(400)
 
     image = data["image"]
@@ -478,6 +478,12 @@ def change_main_photo(plant_id, photo_id, selected, user_id):
 
     if not Plant.query.join(Photo, Photo.plant_id == Plant.plant_id).filter((Plant.user_id == user_id) & (Photo.photo_id == photo_id)).first():
         return jsonify({"Фото не найдено"}), 404
+
+    # Если у растения до этого было основное фото
+    main_plant = MainPhoto.query.filter_by(plant_id=plant_id).first()
+    if main_plant:
+        db.session.delete(main_plant)
+        db.session.commit()
 
     # Находим существующую запись
     main_photo = MainPhoto.query.filter_by(photo_id=photo_id).first()

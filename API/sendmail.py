@@ -16,7 +16,7 @@ def send_activation_email(email, code):
     # Данные
     recipient_email = email
     subject = "Подтверждение почты PlantCare"
-    body = f"Для активации аккаунта перейдите по ссылке: https://localhost/confirm_email?email={recipient_email}&code={code}"
+    body = f"Для активации аккаунта перейдите по ссылке: https://localhost/auth/confirm_email?email={recipient_email}&code={code}"
 
     # Создаем сообщение
     msg = MIMEMultipart()
